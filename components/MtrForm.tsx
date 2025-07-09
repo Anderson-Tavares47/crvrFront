@@ -74,6 +74,7 @@ export default function MtrForm() {
           }
         }
       } catch (error) {
+         console.error("Erro ao consultar MTR:", error);
         setResultados((prev) => [
           ...prev,
           {
