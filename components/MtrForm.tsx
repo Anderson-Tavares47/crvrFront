@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { consultarMtrServer } from "./action";
 import jsPDF from "jspdf";
 import Logo from "../assets/img/logoCRVR.jpeg";
@@ -14,6 +14,11 @@ export default function MtrForm() {
   const filaRef = useRef<string[]>([]);
   const processandoRef = useRef(false);
   const emProcessamentoRef = useRef<Set<string>>(new Set());
+  const inputRef = useRef<HTMLInputElement>(null); // Ref para foco automático
+
+  useEffect(() => {
+    inputRef.current?.focus(); // Focar o input ao carregar
+  }, []);
 
   const processarFila = async () => {
     if (processandoRef.current || filaRef.current.length === 0) return;
@@ -47,8 +52,7 @@ export default function MtrForm() {
               const dataEmissaoDate = new Date(ano, mes - 1, dia);
               const hoje = new Date();
               const diffDias = Math.floor(
-                (hoje.getTime() - dataEmissaoDate.getTime()) /
-                  (1000 * 60 * 60 * 24)
+                (hoje.getTime() - dataEmissaoDate.getTime()) / (1000 * 60 * 60 * 24)
               );
 
               if (dataEmissaoDate > hoje) {
@@ -74,7 +78,7 @@ export default function MtrForm() {
           }
         }
       } catch (error) {
-         console.error("Erro ao consultar MTR:", error);
+        console.error("Erro ao consultar MTR:", error);
         setResultados((prev) => [
           ...prev,
           {
@@ -86,7 +90,7 @@ export default function MtrForm() {
           },
         ]);
       } finally {
-        emProcessamentoRef.current.delete(proximo); // <- remove do set
+        emProcessamentoRef.current.delete(proximo);
         processandoRef.current = false;
         setTimeout(processarFila, 100);
       }
@@ -102,6 +106,7 @@ export default function MtrForm() {
     const codigo = mtr.trim().replace(/\D/g, "").slice(0, 10);
     if (!codigo) {
       setErroInput("O número do MTR é obrigatório.");
+      setMtr("");
       return;
     }
 
@@ -112,14 +117,20 @@ export default function MtrForm() {
 
     if (jaExiste) {
       setErroInput(`O MTR #${codigo} já foi consultado ou está em processamento.`);
+      setMtr("");
       return;
     }
 
-    emProcessamentoRef.current.add(codigo); // <- adiciona ao set
+    emProcessamentoRef.current.add(codigo);
     filaRef.current.push(codigo);
     setMtr("");
     processarFila();
   };
+
+  const limparResultados = () => {
+    setResultados([]);
+  };
+
 
   const gerarPDF = () => {
     setGerandoPDF(true);
@@ -247,6 +258,7 @@ export default function MtrForm() {
     <div className="w-full px-4 mt-8">
       <form onSubmit={handleSubmit} className="max-w-2xl mx-auto space-y-4">
         <input
+          ref={inputRef}
           type="text"
           placeholder="Digite ou bip o código de barras do MTR"
           value={mtr}
@@ -255,23 +267,34 @@ export default function MtrForm() {
         />
         {erroInput && <p className="text-red-500 text-sm mt-1">{erroInput}</p>}
 
-        <div className="flex gap-4">
+        <div className="flex flex-wrap gap-4">
           <button
             type="submit"
             className="flex-1 bg-blue-600 text-white py-3 rounded-md hover:bg-blue-700 transition"
           >
             Adicionar
           </button>
+          <button
+            type="button"
+            onClick={limparResultados}
+            disabled={resultados.length === 0}
+            className={`flex-1 py-3 rounded-md transition ${resultados.length > 0
+              ? 'bg-red-600 text-white hover:bg-red-700'
+              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              }`}
+          >
+            Limpar Lista
+          </button>
+
 
           <button
             type="button"
             onClick={gerarPDF}
             disabled={resultados.filter(r => r.validation?.code === 200 && !r.validacaoData).length === 0 || gerandoPDF}
-            className={`flex-1 py-3 rounded-md transition flex items-center justify-center ${
-              resultados.filter(r => r.validation?.code === 200 && !r.validacaoData).length > 0 
-                ? 'bg-green-600 text-white hover:bg-green-700' 
-                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-            }`}
+            className={`flex-1 py-3 rounded-md transition flex items-center justify-center ${resultados.filter(r => r.validation?.code === 200 && !r.validacaoData).length > 0
+              ? 'bg-green-600 text-white hover:bg-green-700'
+              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              }`}
           >
             {gerandoPDF ? (
               <>
@@ -293,13 +316,12 @@ export default function MtrForm() {
           resultado?.data && resultado?.validation && (
             <div
               key={index}
-              className={`bg-white border rounded-lg shadow-sm p-5 w-full hover:shadow-md transition ${
-                resultado.validation.code === 200 
-                  ? resultado.validacaoData 
-                    ? 'border-yellow-200' 
-                    : 'border-green-200' 
+              className={`bg-white border rounded-lg shadow-sm p-5 w-full hover:shadow-md transition ${resultado.validation.code === 200
+                  ? resultado.validacaoData
+                    ? 'border-yellow-200'
+                    : 'border-green-200'
                   : 'border-red-200'
-              }`}
+                }`}
             >
               <div className="flex items-center justify-between flex-wrap gap-2">
                 <h3 className="text-base font-bold text-gray-800">
@@ -307,13 +329,14 @@ export default function MtrForm() {
                 </h3>
 
                 <div className="flex flex-col gap-1 items-end">
-                  <span className={`text-xs px-3 py-1 rounded-full font-medium ${
-                    resultado.validation.code === 200 
-                      ? resultado.validacaoData 
-                        ? 'bg-yellow-100 text-yellow-800' 
-                        : 'bg-green-100 text-green-700' 
-                      : 'bg-red-100 text-red-600'
-                  }`}>
+                  <span
+                    className={`text-xs px-3 py-1 rounded-full font-medium ${resultado.validation.code === 200
+                        ? resultado.validacaoData
+                          ? 'bg-yellow-100 text-yellow-800'
+                          : 'bg-green-100 text-green-700'
+                        : 'bg-red-100 text-red-600'
+                      }`}
+                  >
                     {resultado.validation.message ?? "Status desconhecido"}
                   </span>
 
@@ -325,14 +348,30 @@ export default function MtrForm() {
                 </div>
               </div>
 
-              <hr className="my-3" />
+              {(resultado.validation.code !== 200 || resultado.validacaoData) && (
+                <>
+                  <hr className="my-3" />
 
-              <div className="grid grid-cols-1 gap-1 text-sm text-gray-700">
-                <p><span className="font-medium">Data de Emissão:</span> {resultado.data.dataEmissao ?? "Não informada"}</p>
-                <p><span className="font-medium">Data de Recebimento:</span> {resultado.data.dataRecebimento ?? "Ainda não recebido"}</p>
-                <p><span className="font-medium">Gerador:</span> {resultado.data.gerador?.nome ?? "Desconhecido"}</p>
-                <p><span className="font-medium">Município:</span> {resultado.data.gerador?.municipio ?? "Desconhecido"}</p>
-              </div>
+                  <div className="grid grid-cols-1 gap-1 text-sm text-gray-700">
+                    <p>
+                      <span className="font-medium">Data de Emissão:</span>{" "}
+                      {resultado.data.dataEmissao ?? "Não informada"}
+                    </p>
+                    <p>
+                      <span className="font-medium">Data de Recebimento:</span>{" "}
+                      {resultado.data.dataRecebimento ?? "Ainda não recebido"}
+                    </p>
+                    <p>
+                      <span className="font-medium">Gerador:</span>{" "}
+                      {resultado.data.gerador?.nome ?? "Desconhecido"}
+                    </p>
+                    <p>
+                      <span className="font-medium">Município:</span>{" "}
+                      {resultado.data.gerador?.municipio ?? "Desconhecido"}
+                    </p>
+                  </div>
+                </>
+              )}
             </div>
           )
         ))}
