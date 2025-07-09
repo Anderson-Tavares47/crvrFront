@@ -181,6 +181,8 @@ export default function MtrForm() {
 
     const hoje = new Date();
     const dataFormatada = hoje.toLocaleDateString('pt-BR');
+    const horaFormatada = hoje.getHours().toLocaleString('pt-BR')
+    const minutosFormatado = hoje.getMinutes().toLocaleString('pt-BR')
     doc.setFontSize(10);
 
     doc.setDrawColor(200, 200, 200);
@@ -246,9 +248,9 @@ export default function MtrForm() {
     footerY += lineHeight;
 
     doc.setFontSize(10);
-    doc.text("Assinatura do Motorista: ________________________________________________", margin, footerY);
+    doc.text("Assinatura do Motorista: _______________________________________________________________________________________________________", margin, footerY);
     footerY += lineHeight;
-    doc.text(`Data: ${dataFormatada}`, margin, footerY);
+    doc.text(`Data: ${dataFormatada}, ${horaFormatada}:${minutosFormatado}`, margin, footerY);
 
     doc.save(`Relatorio_MTRs_${dataFormatada.replace(/\//g, '-')}.pdf`);
     setGerandoPDF(false);
