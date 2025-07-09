@@ -13,6 +13,7 @@ export default function MtrForm() {
 
   const filaRef = useRef<string[]>([]);
   const processandoRef = useRef(false);
+  const emProcessamentoRef = useRef<Set<string>>(new Set());
 
   const processarFila = async () => {
     if (processandoRef.current || filaRef.current.length === 0) return;
@@ -20,61 +21,77 @@ export default function MtrForm() {
 
     const proximo = filaRef.current.shift();
     if (proximo) {
-      const res = await consultarMtrServer(proximo);
+      try {
+        const res = await consultarMtrServer(proximo);
 
-      if (res?.erro && !res.data) {
+        if (res?.erro && !res.data) {
+          setResultados((prev) => [
+            ...prev,
+            {
+              data: { numeroMTR: proximo },
+              validation: { code: 999, message: res.mensagem },
+            },
+          ]);
+        } else {
+          const numeroMTR = res.data?.numeroMTR;
+          const jaExiste = resultados.some(
+            (item) => item?.data?.numeroMTR === numeroMTR
+          );
+
+          if (!jaExiste) {
+            const dataEmissao = res.data?.dataEmissao;
+            let validacaoData = null;
+
+            if (dataEmissao) {
+              const [dia, mes, ano] = dataEmissao.split("/").map(Number);
+              const dataEmissaoDate = new Date(ano, mes - 1, dia);
+              const hoje = new Date();
+              const diffDias = Math.floor(
+                (hoje.getTime() - dataEmissaoDate.getTime()) /
+                  (1000 * 60 * 60 * 24)
+              );
+
+              if (dataEmissaoDate > hoje) {
+                validacaoData = {
+                  code: 1001,
+                  message: "Data de emissão no futuro",
+                };
+              } else if (diffDias > 30) {
+                validacaoData = {
+                  code: 1002,
+                  message: "Data de emissão superior a 30 dias",
+                };
+              }
+            }
+
+            setResultados((prev) => [
+              ...prev,
+              {
+                ...res,
+                validacaoData,
+              },
+            ]);
+          }
+        }
+      } catch (error) {
         setResultados((prev) => [
           ...prev,
           {
             data: { numeroMTR: proximo },
-            validation: { code: 999, message: res.mensagem },
+            validation: {
+              code: 998,
+              message: "Erro ao consultar MTR",
+            },
           },
         ]);
-      } else {
-        const numeroMTR = res.data?.numeroMTR;
-        const jaExiste = resultados.some(
-          (item) => item?.data?.numeroMTR === numeroMTR
-        );
-
-        if (!jaExiste) {
-          const dataEmissao = res.data?.dataEmissao;
-          let validacaoData = null;
-
-          if (dataEmissao) {
-            const [dia, mes, ano] = dataEmissao.split("/").map(Number);
-            const dataEmissaoDate = new Date(ano, mes - 1, dia);
-            const hoje = new Date();
-            const diffDias = Math.floor(
-              (hoje.getTime() - dataEmissaoDate.getTime()) /
-                (1000 * 60 * 60 * 24)
-            );
-
-            if (dataEmissaoDate > hoje) {
-              validacaoData = {
-                code: 1001,
-                message: "Data de emissão no futuro",
-              };
-            } else if (diffDias > 30) {
-              validacaoData = {
-                code: 1002,
-                message: "Data de emissão superior a 30 dias",
-              };
-            }
-          }
-
-          setResultados((prev) => [
-            ...prev,
-            {
-              ...res,
-              validacaoData,
-            },
-          ]);
-        }
+      } finally {
+        emProcessamentoRef.current.delete(proximo); // <- remove do set
+        processandoRef.current = false;
+        setTimeout(processarFila, 100);
       }
+    } else {
+      processandoRef.current = false;
     }
-
-    processandoRef.current = false;
-    setTimeout(processarFila, 100);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -89,164 +106,141 @@ export default function MtrForm() {
 
     const jaExiste =
       resultados.some((item) => item?.data?.numeroMTR === codigo) ||
-      filaRef.current.includes(codigo);
+      filaRef.current.includes(codigo) ||
+      emProcessamentoRef.current.has(codigo);
 
     if (jaExiste) {
       setErroInput(`O MTR #${codigo} já foi consultado ou está em processamento.`);
       return;
     }
 
+    emProcessamentoRef.current.add(codigo); // <- adiciona ao set
     filaRef.current.push(codigo);
     setMtr("");
     processarFila();
   };
 
-const gerarPDF = () => {
-  setGerandoPDF(true);
-  
-  const doc = new jsPDF();
-  const mtrsValidos = resultados.filter(
-    (r) => r.validation?.code === 200 && !r.validacaoData
-  );
+  const gerarPDF = () => {
+    setGerandoPDF(true);
 
-  if (mtrsValidos.length === 0) {
-    alert("Não há MTRs válidos para gerar o relatório!");
-    setGerandoPDF(false);
-    return;
-  }
+    const doc = new jsPDF();
+    const mtrsValidos = resultados.filter(
+      (r) => r.validation?.code === 200 && !r.validacaoData
+    );
 
-  // Configurações de layout
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const pageHeight = doc.internal.pageSize.getHeight();
-  const margin = 15;
-  const lineHeight = 7;
-  const colWidth = (pageWidth - margin * 2) / 4; // Agora são 4 colunas
-  const maxLinesPerCol = Math.floor((pageHeight - margin * 2 - 30) / lineHeight);
-
-  // Adiciona marca d'água
-  try {
-    if (Logo?.src) {
-      doc.saveGraphicsState();
-      const gState = new (doc as any).GState({ opacity: 0.1 }); // Opacidade mais suave
-      doc.setGState(gState);
-      doc.addImage(
-        Logo.src,
-        'JPEG',
-        (pageWidth - 100) / 2,
-        (pageHeight - 100) / 2,
-        100,
-        100,
-        undefined,
-        'NONE'
-      );
-      doc.restoreGraphicsState();
+    if (mtrsValidos.length === 0) {
+      alert("Não há MTRs válidos para gerar o relatório!");
+      setGerandoPDF(false);
+      return;
     }
-  } catch (error) {
-    console.error("Erro ao adicionar logo:", error);
-  }
 
-  // Cabeçalho principal
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(16);
-  doc.setTextColor(40, 40, 40);
-  doc.text("RELATÓRIO DE MTRs", pageWidth / 2, margin, { align: 'center' });
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 15;
+    const lineHeight = 7;
+    const colWidth = (pageWidth - margin * 2) / 4;
+    const maxLinesPerCol = Math.floor((pageHeight - margin * 2 - 30) / lineHeight);
 
-  const hoje = new Date();
-  const dataFormatada = hoje.toLocaleDateString('pt-BR');
-  doc.setFontSize(10);
+    try {
+      if (Logo?.src) {
+        doc.saveGraphicsState();
+        const gState = new (doc as any).GState({ opacity: 0.1 });
+        doc.setGState(gState);
+        doc.addImage(
+          Logo.src,
+          'JPEG',
+          (pageWidth - 100) / 2,
+          (pageHeight - 100) / 2,
+          100,
+          100,
+          undefined,
+          'NONE'
+        );
+        doc.restoreGraphicsState();
+      }
+    } catch (error) {
+      console.error("Erro ao adicionar logo:", error);
+    }
 
-  // Linha divisória
-  doc.setDrawColor(200, 200, 200);
-
-  // Lista em 4 colunas com cabeçalhos condicionais
-  let currentPage = 1;
-  let currentCol = 0;
-  let currentLine = 0;
-  const colsWithContent = new Set<number>();
-
-  // Função para adicionar cabeçalhos apenas nas colunas com conteúdo
-  const addConditionalHeaders = (y: number) => {
     doc.setFont("helvetica", "bold");
+    doc.setFontSize(16);
+    doc.setTextColor(40, 40, 40);
+    doc.text("RELATÓRIO DE MTRs", pageWidth / 2, margin, { align: 'center' });
+
+    const hoje = new Date();
+    const dataFormatada = hoje.toLocaleDateString('pt-BR');
     doc.setFontSize(10);
-    
-    // Itera pelas 4 colunas possíveis
-    for (let c = 0; c < 4; c++) {
-      // Só adiciona cabeçalho se a coluna tiver conteúdo
-      if (colsWithContent.has(c)) {
-        const x = margin + (c * colWidth);
-        doc.text("Nº CÓDIGO MTR", x, y);
+
+    doc.setDrawColor(200, 200, 200);
+
+    let currentPage = 1;
+    let currentCol = 0;
+    let currentLine = 0;
+    const colsWithContent = new Set<number>();
+
+    const addConditionalHeaders = (y: number) => {
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(10);
+      for (let c = 0; c < 4; c++) {
+        if (colsWithContent.has(c)) {
+          const x = margin + (c * colWidth);
+          doc.text("Nº CÓDIGO MTR", x, y);
+        }
       }
+      doc.setFont("helvetica", "normal");
+    };
+
+    let yPosition = margin + 25;
+
+    doc.setFontSize(10);
+
+    mtrsValidos.forEach((r, idx) => {
+      if (currentLine >= maxLinesPerCol) {
+        currentCol++;
+        currentLine = 0;
+        if (currentCol > 3) {
+          doc.addPage();
+          currentPage++;
+          currentCol = 0;
+          yPosition = margin + 25;
+          colsWithContent.clear();
+        } else {
+          yPosition = margin + 25;
+        }
+      }
+
+      colsWithContent.add(currentCol);
+
+      const xPosition = margin + (currentCol * colWidth);
+      if (currentLine === 0) {
+        addConditionalHeaders(yPosition - lineHeight - 2);
+      }
+
+      doc.text(`${idx + 1}. ${r.data.numeroMTR}`, xPosition, yPosition);
+
+      yPosition += lineHeight;
+      currentLine++;
+    });
+
+    doc.setPage(currentPage);
+    let footerY = pageHeight - margin - 15;
+    if (yPosition > footerY - 20) {
+      doc.addPage();
+      footerY = pageHeight - margin - 15;
     }
-    
-    doc.setFont("helvetica", "normal");
+
+    doc.setDrawColor(200, 200, 200);
+    doc.line(margin, footerY, pageWidth - margin, footerY);
+    footerY += lineHeight;
+
+    doc.setFontSize(10);
+    doc.text("Assinatura do Motorista: ________________________________________________", margin, footerY);
+    footerY += lineHeight;
+    doc.text(`Data: ${dataFormatada}`, margin, footerY);
+
+    doc.save(`Relatorio_MTRs_${dataFormatada.replace(/\//g, '-')}.pdf`);
+    setGerandoPDF(false);
   };
-
-  // Posição inicial
-  let yPosition = margin + 25;
-  
-  // Adiciona os itens
-  doc.setFontSize(10);
-  
-  mtrsValidos.forEach((r, idx) => {
-    // Verifica se precisa de nova página
-    if (currentLine >= maxLinesPerCol) {
-      currentCol++;
-      currentLine = 0;
-      
-      // Se chegou na quinta coluna (índice 4), nova página
-      if (currentCol > 3) {
-        doc.addPage();
-        currentPage++;
-        currentCol = 0;
-        yPosition = margin + 25;
-        colsWithContent.clear(); // Reseta para nova página
-      } else {
-        yPosition = margin + 25; // Volta ao topo para nova coluna
-      }
-    }
-
-    // Marca que esta coluna tem conteúdo
-    colsWithContent.add(currentCol);
-    
-    // Calcula posição X
-    const xPosition = margin + (currentCol * colWidth);
-    
-    // Adiciona cabeçalhos se for a primeira linha da coluna
-    if (currentLine === 0) {
-      addConditionalHeaders(yPosition - lineHeight - 2);
-    }
-
-    // Adiciona o item (número + código)
-    doc.text(`${idx + 1}. ${r.data.numeroMTR}`, xPosition, yPosition);
-    
-    // Atualiza posições
-    yPosition += lineHeight;
-    currentLine++;
-  });
-
-  // Rodapé (só na última página)
-  doc.setPage(currentPage);
-  let footerY = pageHeight - margin - 15;
-  
-  // Garante espaço para o rodapé
-  if (yPosition > footerY - 20) {
-    doc.addPage();
-    footerY = pageHeight - margin - 15;
-  }
-
-  doc.setDrawColor(200, 200, 200);
-  doc.line(margin, footerY, pageWidth - margin, footerY);
-  footerY += lineHeight;
-
-  doc.setFontSize(10);
-  doc.text("Assinatura do Motorista: ________________________________________________", margin, footerY);
-  footerY += lineHeight;
-  doc.text(`Data: ${dataFormatada}`, margin, footerY);
-
-  doc.save(`Relatorio_MTRs_${dataFormatada.replace(/\//g, '-')}.pdf`);
-  setGerandoPDF(false);
-};
-
 
   return (
     <div className="w-full px-4 mt-8">
@@ -256,7 +250,7 @@ const gerarPDF = () => {
           placeholder="Digite ou bip o código de barras do MTR"
           value={mtr}
           onChange={(e) => setMtr(e.target.value)}
-          className={`w-full p-3 border rounded-md focus:outline-none focus:ring-2 ${erroInput ? "border-red-500 focus:ring-red-500" : "border-gray-300 focus:ring-blue-600"}`}
+          className={`w-full p-3 mb-[5px] border rounded-md focus:outline-none focus:ring-2 ${erroInput ? "border-red-500 focus:ring-red-500" : "border-gray-300 focus:ring-blue-600"}`}
         />
         {erroInput && <p className="text-red-500 text-sm mt-1">{erroInput}</p>}
 
