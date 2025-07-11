@@ -47,15 +47,26 @@ export default function MtrForm() {
             const dataEmissao = res.data?.dataEmissao;
             let validacaoData = null;
 
+            function formatarDataBR(data: Date): string {
+              const dia = String(data.getDate()).padStart(2, '0');
+              const mes = String(data.getMonth() + 1).padStart(2, '0');
+              const ano = data.getFullYear();
+              return `${dia}/${mes}/${ano}`;
+            }
+
             if (dataEmissao) {
               const [dia, mes, ano] = dataEmissao.split("/").map(Number);
               const dataEmissaoDate = new Date(ano, mes - 1, dia);
               const hoje = new Date();
+              const hojeNormalizado = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
               const diffDias = Math.floor(
                 (hoje.getTime() - dataEmissaoDate.getTime()) / (1000 * 60 * 60 * 24)
               );
+              
+              const dataEmissaoFormatada = formatarDataBR(dataEmissaoDate);
+              const hojeFormatado = formatarDataBR(hojeNormalizado);
 
-              if (dataEmissaoDate > hoje) {
+              if (dataEmissaoFormatada > hojeFormatado) {
                 validacaoData = {
                   code: 1001,
                   message: "Data de emissão no futuro",
