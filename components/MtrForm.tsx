@@ -63,10 +63,10 @@ export default function MtrForm() {
                 (hoje.getTime() - dataEmissaoDate.getTime()) / (1000 * 60 * 60 * 24)
               );
               
-              const dataEmissaoFormatada = formatarDataBR(dataEmissaoDate);
-              const hojeFormatado = formatarDataBR(hojeNormalizado);
+             const hojeISO = hojeNormalizado.toISOString().split('T')[0]; 
+              const emissaoISO = dataEmissaoDate.toISOString().split('T')[0];
 
-              if (dataEmissaoFormatada > hojeFormatado) {
+              if (emissaoISO > hojeISO) {
                 validacaoData = {
                   code: 1001,
                   message: "Data de emissão no futuro",
