@@ -47,12 +47,12 @@ export default function MtrForm() {
             const dataEmissao = res.data?.dataEmissao;
             let validacaoData = null;
 
-            function formatarDataBR(data: Date): string {
-              const dia = String(data.getDate()).padStart(2, '0');
-              const mes = String(data.getMonth() + 1).padStart(2, '0');
-              const ano = data.getFullYear();
-              return `${dia}/${mes}/${ano}`;
-            }
+            // function formatarDataBR(data: Date): string {
+            //   const dia = String(data.getDate()).padStart(2, '0');
+            //   const mes = String(data.getMonth() + 1).padStart(2, '0');
+            //   const ano = data.getFullYear();
+            //   return `${dia}/${mes}/${ano}`;
+            // }
 
             if (dataEmissao) {
               const [dia, mes, ano] = dataEmissao.split("/").map(Number);
@@ -62,8 +62,6 @@ export default function MtrForm() {
               const diffDias = Math.floor(
                 (hoje.getTime() - dataEmissaoDate.getTime()) / (1000 * 60 * 60 * 24)
               );
-
-              const dataEmissaoFormatada = formatarDataBR(dataEmissaoDate);
               
              const hojeISO = hojeNormalizado.toISOString().split('T')[0]; 
               const emissaoISO = dataEmissaoDate.toISOString().split('T')[0];
