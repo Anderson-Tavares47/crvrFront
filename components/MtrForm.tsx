@@ -259,7 +259,7 @@ export default function MtrForm() {
     footerY += lineHeight;
 
     doc.setFontSize(16);
-    doc.text("Assinatura do Motorista: _____________________________________________________________________________", margin, footerY);
+    doc.text("Assinatura do Motorista: __________________________________________________", margin, footerY);
     footerY += lineHeight;
     doc.text(`Data: ${dataFormatada}, ${horaFormatada}:${minutosFormatado}`, margin, footerY);
 
