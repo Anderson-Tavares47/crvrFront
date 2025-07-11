@@ -62,6 +62,8 @@ export default function MtrForm() {
               const diffDias = Math.floor(
                 (hoje.getTime() - dataEmissaoDate.getTime()) / (1000 * 60 * 60 * 24)
               );
+
+              const dataEmissaoFormatada = formatarDataBR(dataEmissaoDate);
               
              const hojeISO = hojeNormalizado.toISOString().split('T')[0]; 
               const emissaoISO = dataEmissaoDate.toISOString().split('T')[0];
