@@ -255,10 +255,10 @@ export default function MtrForm() {
     }
 
     doc.setDrawColor(200, 200, 200);
-    doc.line(margin, footerY, pageWidth - margin, footerY);
+    // doc.line(margin, footerY, pageWidth - margin, footerY);
     footerY += lineHeight;
 
-    doc.setFontSize(10);
+    doc.setFontSize(16);
     doc.text("Assinatura do Motorista: _______________________________________________________________________________________________________", margin, footerY);
     footerY += lineHeight;
     doc.text(`Data: ${dataFormatada}, ${horaFormatada}:${minutosFormatado}`, margin, footerY);
