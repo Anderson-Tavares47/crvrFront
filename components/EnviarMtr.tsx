@@ -1,70 +1,79 @@
 'use client';
 
-import { useState, useEffect } from "react";
-import { buscarListas } from "./action";
-import { ChevronDown } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react';
+import { buscarListas, enviarMtr } from './action';
 
 interface ListaItem {
   [key: string]: any;
 }
 
-interface FormItem {
-  codigoSequencial: number;
-  justificativa: string | null;
-  codigoInterno: string | null;
-  qtdRecebida: string;
-  residuo: string;
-  codigoAcondicionamento: string;
-  codigoClasse: string;
-  codigoTecnologia: string;
-  codigoTipoEstado: string;
-  codigoUnidade: string;
-  tipoDensidadeValor: string;
-  tipoDensidadeUnidade: string | null;
+interface MTRResponse {
+  numeroMTR: string;
+  gerador: {
+    cnpj: string;
+  };
+  transportador: {
+    placa: string;
+    nomeMotorista: string;
+    cnpj: string;
+  };
+  residuo: {
+    codigoIbama: string;
+    estadoFisico: string;
+    classe: string;
+    tecnologia: string;
+    quantidade: string;
+    unidade: string;
+    acondicionamento: string;
+  };
+  dataTransporte: string;
 }
 
-interface FormData {
-  manifestoCodigo: string;
-  cnpGerador: string;
-  cnpTransportador: string;
-  recebimentoMtrResponsavel: string;
-  recebimentoMtrCargo: string;
-  recebimentoMtrData: string;
-  transporteMtrData: string;
-  recebimentoMtrObs: string;
-  nomeMotorista: string;
-  placaVeiculo: string;
-  itemManifestoRecebimentoJSONs: FormItem[];
+interface MtrError {
+  codigo: string;
+  erro: string;
 }
 
-export default function FormularioRecebimentoMTR() {
-  const [listas, setListas] = useState({
-    unidades: [] as ListaItem[],
-    residuos: [] as ListaItem[],
+export default function MtrBaixaPage() {
+  const [,setListas] = useState({
+    acondicionamentos: [] as ListaItem[],
     classes: [] as ListaItem[],
     estadosFisicos: [] as ListaItem[],
-    acondicionamentos: [] as ListaItem[],
-    tecnologias: [] as ListaItem[]
+    residuos: [] as ListaItem[],
+    tecnologias: [] as ListaItem[],
+    unidades: [] as ListaItem[]
   });
 
   const [loading, setLoading] = useState(true);
-  const [openSelect, setOpenSelect] = useState<string | null>(null);
-
-  const toggleSelect = (field: string) => {
-    setOpenSelect(prev => prev === field ? null : field);
-  };
+  const [mtrsSelecionados, setMtrsSelecionados] = useState<string[]>([]);
+  const [mtrsValidos, setMtrsValidos] = useState<MTRResponse[]>([]);
+  const [mtrsInvalidos, setMtrsInvalidos] = useState<MtrError[]>([]);
+  const [form, setForm] = useState({
+    placaVeiculo: '',
+    nomeMotorista: '',
+    recebimentoMtrResponsavel: 'Pierre',
+    recebimentoMtrCargo: 'Balanceiro',
+    recebimentoMtrData: '',
+    transporteMtrData: '',
+    recebimentoMtrObs: '',
+    qtdRecebida: ''
+  });
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [consultando, setConsultando] = useState(false);
+  const [mtrsDuplicados, setMtrsDuplicados] = useState<string[]>([]);
 
   useEffect(() => {
     async function carregarListas() {
       try {
         const dados = await buscarListas();
         setListas({
-          unidades: dados.unidades.unidades || [],
-          residuos: dados.residuos.unidades || [],
+          acondicionamentos: dados.acondicionamentos.unidades || [],
           classes: dados.classes.unidades || [],
           estadosFisicos: dados.estadosFisicos.unidades || [],
-          acondicionamentos: dados.acondicionamentos.unidades || [],
+          residuos: dados.residuos.unidades || [],
           tecnologias: dados.tecnologias.unidades || [],
+          unidades: dados.unidades.unidades || []
         });
       } catch (error) {
         console.error("Erro ao carregar listas:", error);
@@ -73,96 +82,63 @@ export default function FormularioRecebimentoMTR() {
       }
     }
     carregarListas();
+    
+    if (textareaRef.current) {
+      textareaRef.current.focus();
+    }
   }, []);
 
-  const initialFormItem: FormItem = {
-    codigoSequencial: 1,
-    justificativa: null,
-    codigoInterno: null,
-    qtdRecebida: "",
-    residuo: "",
-    codigoAcondicionamento: "",
-    codigoClasse: "",
-    codigoTecnologia: "",
-    codigoTipoEstado: "",
-    codigoUnidade: "",
-    tipoDensidadeValor: "",
-    tipoDensidadeUnidade: null
+  const limparDados = () => {
+    setMtrsSelecionados([]);
+    setMtrsValidos([]);
+    setMtrsInvalidos([]);
+    setMtrsDuplicados([]);
+    setForm({
+      placaVeiculo: '',
+      nomeMotorista: '',
+      recebimentoMtrResponsavel: 'Pierre',
+      recebimentoMtrCargo: 'Balanceiro',
+      recebimentoMtrData: '',
+      transporteMtrData: '',
+      recebimentoMtrObs: '',
+      qtdRecebida: ''
+    });
+    setErrors({});
+    if (textareaRef.current) {
+      textareaRef.current.value = '';
+      textareaRef.current.focus();
+    }
   };
 
-  const [form, setForm] = useState<FormData>({
-    manifestoCodigo: "",
-    cnpGerador: "",
-    cnpTransportador: "",
-    recebimentoMtrResponsavel: "",
-    recebimentoMtrCargo: "",
-    recebimentoMtrData: "",
-    transporteMtrData: "",
-    recebimentoMtrObs: "",
-    nomeMotorista: "",
-    placaVeiculo: "",
-    itemManifestoRecebimentoJSONs: [initialFormItem]
-  });
+  async function handleEnviarDados() {
+    const payload = gerarObjetoFinal();
+    if (!payload) return;
 
-  const [errors, setErrors] = useState<Record<string, string>>({});
+    const resposta = await enviarMtr(payload);
 
-  const validateForm = (): boolean => {
-    const newErrors: Record<string, string> = {};
+    if (resposta.success) {
+      alert("MTRs enviados com sucesso!");
+      console.log("Resposta da FEPAM via backend:", resposta.data);
+      limparDados();
+    } else {
+      alert("Erro ao enviar MTRs: " + resposta.message);
+    }
+  }
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
     
-    // Validação dos campos principais
-    if (!form.manifestoCodigo.trim()) newErrors.manifestoCodigo = "Código do manifesto é obrigatório";
-    if (!form.cnpGerador.trim()) newErrors.cnpGerador = "CNPJ do gerador é obrigatório";
-    if (!form.cnpTransportador.trim()) newErrors.cnpTransportador = "CNPJ do transportador é obrigatório";
-    if (!form.recebimentoMtrResponsavel.trim()) newErrors.recebimentoMtrResponsavel = "Responsável pelo recebimento é obrigatório";
-    if (!form.recebimentoMtrData) newErrors.recebimentoMtrData = "Data de recebimento é obrigatória";
-    if (!form.transporteMtrData) newErrors.transporteMtrData = "Data de transporte é obrigatória";
-    if (!form.nomeMotorista.trim()) newErrors.nomeMotorista = "Nome do motorista é obrigatório";
-    if (!form.placaVeiculo.trim()) newErrors.placaVeiculo = "Placa do veículo é obrigatória";
-    
-    // Validação dos itens do manifesto
-    const item = form.itemManifestoRecebimentoJSONs[0];
-    if (!item.residuo) newErrors["item.residuo"] = "Código do resíduo é obrigatório";
-    if (!item.codigoTecnologia) newErrors["item.codigoTecnologia"] = "Código da tecnologia é obrigatório";
-    if (!item.qtdRecebida) newErrors["item.qtdRecebida"] = "Quantidade recebida é obrigatória";
-    if (!item.codigoUnidade) newErrors["item.codigoUnidade"] = "Código da unidade é obrigatório";
-    if (!item.codigoTipoEstado) newErrors["item.codigoTipoEstado"] = "Tipo de estado é obrigatório";
-    if (!item.codigoClasse) newErrors["item.codigoClasse"] = "Código da classe é obrigatório";
-    if (!item.codigoAcondicionamento) newErrors["item.codigoAcondicionamento"] = "Código de acondicionamento é obrigatório";
-    
-    // Validação condicional da densidade
-    if (item.codigoUnidade === "1" || item.codigoUnidade === "2") {
-      if (!item.tipoDensidadeValor) {
-        newErrors["item.tipoDensidadeValor"] = "Valor da densidade é obrigatório para esta unidade";
+    if (name === 'qtdRecebida') {
+      if (!/^\d*\.?\d*$/.test(value) && value !== '') {
+        return;
       }
     }
     
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-
-    if (name.startsWith("item.")) {
-      const key = name.replace("item.", "");
-      setForm(prev => ({
-        ...prev,
-        itemManifestoRecebimentoJSONs: [
-          {
-            ...prev.itemManifestoRecebimentoJSONs[0],
-            [key]: key === 'codigoSequencial' ? Number(value) : 
-                   (key === 'justificativa' || key === 'codigoInterno') ? (value || null) : value
-          }
-        ]
-      }));
-    } else {
-      setForm(prev => ({
-        ...prev,
-        [name]: value
-      }));
-    }
+    setForm(prev => ({
+      ...prev,
+      [name]: value
+    }));
     
-    // Limpa o erro quando o campo é alterado
     if (errors[name]) {
       setErrors(prev => {
         const newErrors = {...prev};
@@ -172,147 +148,270 @@ export default function FormularioRecebimentoMTR() {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-  e.preventDefault();
-
-  if (!validateForm()) return;
-
-  const formatDate = (dateString: string) => {
-  // Assume o formato YYYY-MM-DD (padrão do input type="date")
-  const date = new Date(dateString);
-  
-  // Ajusta para o fuso horário local antes de extrair os componentes
-  date.setMinutes(date.getMinutes() + date.getTimezoneOffset());
-  
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  
-  return `${year}${month}${day}`;
-};
-
-  // Preparar o payload no formato exato necessário
-  const payload = {
-    manifestoRecebimentoJSONs: [{
-      manifestoCodigo: form.manifestoCodigo,
-      cnpGerador: form.cnpGerador,
-      cnpTransportador: form.cnpTransportador,
-      recebimentoMtrResponsavel: form.recebimentoMtrResponsavel,
-      recebimentoMtrCargo: form.recebimentoMtrCargo || null, // Envia null se vazio
-      recebimentoMtrData: formatDate(form.recebimentoMtrData),
-      transporteMtrData: formatDate(form.transporteMtrData),
-      recebimentoMtrObs: form.recebimentoMtrObs || null, // Envia null se vazio
-      nomeMotorista: form.nomeMotorista,
-      placaVeiculo: form.placaVeiculo,
-      itemManifestoRecebimentoJSONs: form.itemManifestoRecebimentoJSONs.map(item => ({
-        codigoSequencial: item.codigoSequencial,
-        justificativa: item.justificativa || null,
-        codigoInterno: item.codigoInterno || null,
-        qtdRecebida: Number(item.qtdRecebida),
-        residuo: item.residuo,
-        codigoAcondicionamento: Number(item.codigoAcondicionamento),
-        codigoClasse: Number(item.codigoClasse),
-        codigoTecnologia: Number(item.codigoTecnologia),
-        codigoTipoEstado: Number(item.codigoTipoEstado),
-        codigoUnidade: Number(item.codigoUnidade),
-        tipoDensidadeValor: item.tipoDensidadeValor ? Number(item.tipoDensidadeValor) : null,
-        tipoDensidadeUnidade: item.codigoUnidade === "1" ? "t/m³" :
-                             item.codigoUnidade === "2" ? "g/cm³" : null
-      }))
-    }]
+  const validateForm = (): boolean => {
+    const newErrors: Record<string, string> = {};
+    
+    if (!form.placaVeiculo.trim()) newErrors.placaVeiculo = "Placa do veículo é obrigatória";
+    if (!form.nomeMotorista.trim()) newErrors.nomeMotorista = "Nome do motorista é obrigatório";
+    if (!form.recebimentoMtrData) newErrors.recebimentoMtrData = "Data de recebimento é obrigatória";
+    if (!form.qtdRecebida) {
+      newErrors.qtdRecebida = "Quantidade recebida é obrigatória";
+    } else if (!/^\d+(\.\d{1,3})?$/.test(form.qtdRecebida)) {
+      newErrors.qtdRecebida = "Quantidade deve ser numérica (ex: 10 ou 10.5)";
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
-  console.log("📦 Payload final:", JSON.stringify(payload, null, 2));
+  const processarMTRs = (mtrs: string[]): { unicos: string[], duplicados: string[] } => {
+    const seen = new Set<string>();
+    const duplicados: string[] = [];
+    const unicos: string[] = [];
 
-  // Exemplo de como enviar para a API:
-  // const enviarParaAPI = async () => {
-  //   try {
-  //     const response = await fetch('/sua-api/recebimento-mtr', {
-  //       method: 'POST',
-  //       headers: {
-  //         'Content-Type': 'application/json',
-  //       },
-  //       body: JSON.stringify(payload)
-  //     });
+    mtrs.forEach(mtr => {
+      const mtrProcessado = mtr.substring(0, 10);
+      if (!mtrProcessado) return;
 
-  //     if (!response.ok) {
-  //       throw new Error('Erro ao enviar os dados');
-  //     }
+      if (seen.has(mtrProcessado)) {
+        duplicados.push(mtrProcessado);
+      } else {
+        seen.add(mtrProcessado);
+        unicos.push(mtrProcessado);
+      }
+    });
 
-  //     const data = await response.json();
-  //     console.log('✅ Resposta da API:', data);
-  //     // Adicione aqui qualquer lógica de sucesso (redirecionamento, notificação, etc.)
+    return { unicos, duplicados };
+  };
 
-  //   } catch (error) {
-  //     console.error('Erro no envio:', error);
-  //     // Adicione aqui tratamento de erro (notificação, etc.)
-  //   }
-  // };
+  const handleTextareaKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (!/[0-9]|Backspace|Delete|ArrowLeft|ArrowRight|ArrowUp|ArrowDown|Tab|Enter/.test(e.key)) {
+      e.preventDefault();
+    }
+  };
 
-  // // Chama a função para enviar
-  // enviarParaAPI();
-};
+  const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const value = e.target.value;
+    const lines = value.split('\n');
+    let processedLines: string[] = [];
+    
+    lines.forEach(line => {
+      const numbers = line.replace(/\D/g, '').substring(0, 10);
+      if (numbers) processedLines.push(numbers);
+    });
 
-  if (loading) {
-    return <div className="max-w-6xl mx-auto px-4 py-6">Carregando...</div>;
+    const { unicos, duplicados } = processarMTRs(processedLines);
+    setMtrsSelecionados(unicos);
+    setMtrsDuplicados(duplicados);
+    e.target.value = unicos.join('\n');
+  };
+
+  const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    e.preventDefault();
+    const pastedText = e.clipboardData.getData('text');
+    const numbers = pastedText.replace(/\D/g, '');
+    
+    const chunks = [];
+    for (let i = 0; i < numbers.length; i += 10) {
+      const chunk = numbers.substring(i, i + 10);
+      if (chunk) chunks.push(chunk);
+    }
+
+    const { unicos, duplicados } = processarMTRs([...mtrsSelecionados, ...chunks]);
+    setMtrsSelecionados(unicos);
+    setMtrsDuplicados(duplicados);
+    
+    if (textareaRef.current) {
+      textareaRef.current.value = unicos.join('\n');
+    }
+  };
+
+  async function consultarMtrs() {
+    const { unicos, duplicados } = processarMTRs(mtrsSelecionados);
+    
+    if (unicos.length === 0) {
+      alert("Por favor, insira pelo menos um MTR válido para consulta");
+      return;
+    }
+
+    setConsultando(true);
+    setMtrsValidos([]);
+    setMtrsInvalidos([]);
+    setMtrsDuplicados(duplicados);
+
+    const resultados: MTRResponse[] = [];
+    const erros: MtrError[] = [];
+
+    const STATUS = {
+      OK: 200,
+      RECEBIDO: 405,
+      CANCELADO: 406,
+      DESTINADOR_INVALIDO: 407,
+      TEMPORARIO: 405
+    };
+
+    for (const codigo of unicos) {
+      try {
+        const res = await fetch('https://crvr-back.vercel.app/api/mtr/manifesto-pdf', { 
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ manifestoCodigo: codigo }),
+        });
+
+        const data = await res.json();
+        
+        switch (res.status) {
+          case STATUS.OK:
+            if (data.validation?.isValid) {
+              resultados.push(data.data);
+            } else {
+              erros.push({ 
+                codigo, 
+                erro: "MTR inválido (validação falhou)" 
+              });
+            }
+            break;
+            
+          case STATUS.RECEBIDO:
+            erros.push({ 
+              codigo, 
+              erro: "MTR já recebido anteriormente (Status 405 - Recebido)" 
+            });
+            break;
+            
+          case STATUS.CANCELADO:
+            erros.push({ 
+              codigo, 
+              erro: "MTR cancelado (Status 406 - Cancelado)" 
+            });
+            break;
+            
+          case STATUS.DESTINADOR_INVALIDO:
+            erros.push({ 
+              codigo, 
+              erro: "CNPJ do destinador não corresponde ao gerador (Status 407)" 
+            });
+            break;
+            
+          case STATUS.TEMPORARIO:
+            erros.push({ 
+              codigo, 
+              erro: "MTR temporário não pode ser recebido (Status 405 - Temporário)" 
+            });
+            break;
+            
+          default:
+            erros.push({ 
+              codigo, 
+              erro: `Erro desconhecido (Status ${res.status})` 
+            });
+        }
+      } catch {
+        erros.push({ 
+          codigo, 
+          erro: "Falha na conexão com o servidor" 
+        });
+      }
+    }
+
+    if (resultados.length > 0) {
+      const dataTransporte = resultados[0].dataTransporte || new Date().toLocaleDateString('pt-BR');
+      const [dia, mes, ano] = dataTransporte.split('/');
+      const dataFormatada = `${ano}${mes.padStart(2, '0')}${dia.padStart(2, '0')}`;
+      
+      setForm(prev => ({
+        ...prev,
+        transporteMtrData: dataFormatada
+      }));
+    }
+
+    setMtrsValidos(resultados);
+    setMtrsInvalidos(erros);
+    setConsultando(false);
   }
 
-  const renderSelectField = (
-    label: string,
-    name: string,
-    list: ListaItem[],
-    keyField: string,
-    valueField: string,
-    descField?: string
-  ) => {
-    const fieldKey = name;
-    const currentValue = (form.itemManifestoRecebimentoJSONs[0] as any)[name.split('.')[1]];
-    const error = errors[name];
+  function gerarObjetoFinal() {
+    if (!validateForm()) return;
+    if (mtrsValidos.length === 0) {
+      alert("Nenhum MTR válido para gerar o JSON");
+      return;
+    }
 
-    return (
-      <div key={fieldKey} className="relative">
-        <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
-        <div className="relative">
-          <select
-            name={name}
-            value={currentValue}
-            onChange={handleChange}
-            onClick={() => toggleSelect(name)}
-            className={`w-full p-2 pr-10 text-sm border appearance-none ${error ? 'border-red-500' : 'border-gray-300'} rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
-          >
-            <option value="">Selecione...</option>
-            {list.map((item: any) => (
-              <option key={item[keyField]} value={item[keyField]}>
-                {item[valueField]}{descField && ` - ${item[descField]}`}
-              </option>
-            ))}
-          </select>
-          <ChevronDown
-            className={`absolute right-2 top-1/2 transform -translate-y-1/2 transition-transform ${openSelect === name ? 'rotate-180' : ''}`}
-            size={18}
-          />
-        </div>
-        {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
-      </div>
-    );
-  };
+    const formatDate = (dateString: string) => {
+      if (!dateString) return '';
+      if (/^\d{8}$/.test(dateString)) return dateString;
+      
+      const date = new Date(dateString);
+      date.setMinutes(date.getMinutes() + date.getTimezoneOffset());
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}${month}${day}`;
+    };
+
+    const limparCNPJ = (cnpj: string) => cnpj.replace(/\D/g, '');
+
+    const qtdPorManifesto = parseFloat(form.qtdRecebida) / mtrsValidos.length;
+
+    const payload = {
+      login: '12345678901',
+      senha: 'fepampass',
+      cnp: '12345678901234',
+      manifestoRecebimentoJSONs: mtrsValidos.map((m) => {
+        const codigoEstadoFisico = m.residuo.estadoFisico === 'Sólido' ? 1 : 2;
+        const codigoClasse = m.residuo.classe === 'IIA' ? 3 : 1;
+        const codigoTecnologia = m.residuo.tecnologia === 'Aterro' ? 7 : 5;
+        const codigoUnidade = m.residuo.unidade === 'Tonelada' ? 4 : 1;
+        const codigoAcondicionamento = 1;
+
+        return {
+          manifestoCodigo: m.numeroMTR,
+          cnpGerador: limparCNPJ(m.gerador?.cnpj || ''),
+          cnpTransportador: limparCNPJ(m.transportador?.cnpj || ''),
+          recebimentoMtrResponsavel: form.recebimentoMtrResponsavel,
+          recebimentoMtrCargo: form.recebimentoMtrCargo,
+          recebimentoMtrData: formatDate(form.recebimentoMtrData),
+          transporteMtrData: form.transporteMtrData,
+          recebimentoMtrObs: form.recebimentoMtrObs || '',
+          nomeMotorista: form.nomeMotorista,
+          placaVeiculo: form.placaVeiculo,
+          itemManifestoRecebimentoJSONs: [
+            {
+              codigoSequencial: 1,
+              justificativa: null,
+              codigoInterno: null,
+              qtdRecebida: qtdPorManifesto,
+              residuo: m.residuo?.codigoIbama?.replace(/\D/g, '') || '',
+              codigoAcondicionamento: codigoAcondicionamento,
+              codigoClasse: codigoClasse,
+              codigoTecnologia: codigoTecnologia,
+              codigoTipoEstado: codigoEstadoFisico,
+              codigoUnidade: codigoUnidade
+            }
+          ]
+        };
+      })
+    };
+
+    console.log('Payload para envio:', JSON.stringify(payload, null, 2));
+    return payload;
+  }
 
   const renderInputField = (
     label: string,
     name: string,
     type = "text",
     placeholder = "",
-    required = false
+    required = false,
+    className = ""
   ) => {
     const error = errors[name];
-    const value = name.startsWith("item.") 
-      ? (form.itemManifestoRecebimentoJSONs[0] as any)[name.split('.')[1]]
-      : (form as any)[name];
+    const value = (form as any)[name];
 
     return (
-      <div>
+      <div className={className}>
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          {label} {required && '*'}
+          {label} {required && <span className="text-red-500">*</span>}
         </label>
         <input
           name={name}
@@ -320,153 +419,184 @@ export default function FormularioRecebimentoMTR() {
           value={value}
           onChange={handleChange}
           placeholder={placeholder}
-          className={`w-full p-2 text-sm border ${error ? 'border-red-500' : 'border-gray-300'} rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
+          className={`w-full p-2 text-sm border rounded-md transition-colors duration-200
+            ${error ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 
+              'border-gray-300 focus:ring-blue-500 focus:border-blue-500'}
+            focus:outline-none focus:ring-2`}
         />
         {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
       </div>
     );
   };
 
+  if (loading) {
+    return (
+      <div className="max-w-6xl mx-auto px-4 py-6 flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-6xl mx-auto px-4 py-6">
-      <h2 className="text-2xl font-bold mb-6 text-gray-800">Preencher Dados do Manifesto</h2>
-      
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Seção de informações principais */}
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-          <h3 className="text-lg font-semibold mb-4 text-gray-700">Informações do Manifesto</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {renderInputField("Código do Manifesto *", "manifestoCodigo", "text", "", true)}
-            {renderInputField("CNPJ do Gerador *", "cnpGerador", "text", "Somente números", true)}
-            {renderInputField("CNPJ do Transportador *", "cnpTransportador", "text", "Somente números", true)}
-            {renderInputField("Responsável pelo Recebimento *", "recebimentoMtrResponsavel", "text", "", true)}
-            {renderInputField("Cargo do Responsável", "recebimentoMtrCargo", "text")}
-            {renderInputField("Data de Recebimento *", "recebimentoMtrData", "date", "", true)}
-            {renderInputField("Data de Transporte *", "transporteMtrData", "date", "", true)}
-            {renderInputField("Nome do Motorista *", "nomeMotorista", "text", "", true)}
-            {renderInputField("Placa do Veículo *", "placaVeiculo", "text", "ABC-1234", true)}
-            
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Observações</label>
-              <textarea
-                name="recebimentoMtrObs"
-                value={form.recebimentoMtrObs}
-                onChange={handleChange}
-                className="w-full p-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                rows={2}
-              />
-            </div>
-          </div>
-        </div>
+      <h1 className="text-2xl font-bold mb-6 text-gray-800">Dar baixa em MTRs</h1>
 
-        {/* Seção de itens do manifesto */}
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 relative">
-          <h3 className="text-lg font-semibold mb-4 text-gray-700">Item do Manifesto</h3>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {/* Código do Resíduo */}
-            <div className="md:col-span-2 relative">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Código do Resíduo *</label>
-              <div className="relative">
-                <select
-                  name="item.residuo"
-                  value={form.itemManifestoRecebimentoJSONs[0].residuo}
-                  onChange={handleChange}
-                  onClick={() => toggleSelect('residuo')}
-                  className={`w-full p-2 pr-10 text-sm border appearance-none ${errors['item.residuo'] ? 'border-red-500' : 'border-gray-300'} rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
-                >
-                  <option value="">Selecione...</option>
-                  {listas.residuos.map((residuo: any) => (
-                    <option
-                      key={residuo.tpre3Numero}
-                      value={residuo.tpre3Numero}
-                      title={`${residuo.tpre3Numero} - ${residuo.tpre3Descricao}`}
-                      className="truncate"
-                    >
-                      {residuo.tpre3Numero} - {residuo.tpre3Descricao.length > 50
-                        ? `${residuo.tpre3Descricao.substring(0, 50)}...`
-                        : residuo.tpre3Descricao}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown
-                  className={`absolute right-2 top-1/2 transform -translate-y-1/2 transition-transform ${openSelect === 'residuo' ? 'rotate-180' : ''}`}
-                  size={18}
-                />
-              </div>
-              {errors['item.residuo'] && (
-                <p className="text-red-500 text-xs mt-1">{errors['item.residuo']}</p>
-              )}
-              <p className="text-xs text-gray-500 mt-1">Passe o mouse sobre a opção para ver a descrição completa</p>
-            </div>
-
-            {renderInputField("Quantidade Recebida *", "item.qtdRecebida", "number", "", true)}
-            
-            {renderSelectField(
-              "Unidade de Medida *",
-              "item.codigoUnidade",
-              listas.unidades,
-              "tpuniCodigo",
-              "tpuniSigla",
-              "tpuniDescricao"
-            )}
-            
-            {renderSelectField(
-              "Estado Físico *",
-              "item.codigoTipoEstado",
-              listas.estadosFisicos,
-              "tpestCodigo",
-              "tpestSigla",
-              "tpestDescricao"
-            )}
-            
-            {renderSelectField(
-              "Classe *",
-              "item.codigoClasse",
-              listas.classes,
-              "tpclaCodigo",
-              "tpclaSigla",
-              "tpclaDescricao"
-            )}
-            
-            {renderSelectField(
-              "Acondicionamento *",
-              "item.codigoAcondicionamento",
-              listas.acondicionamentos,
-              "tipoCodigo",
-              "tipoDescricao"
-            )}
-            
-            {renderSelectField(
-              "Tecnologia *",
-              "item.codigoTecnologia",
-              listas.tecnologias,
-              "tipoCodigo",
-              "tipoDescricao"
-            )}
-
-            {/* Valor da Densidade - Condicional */}
-            {(form.itemManifestoRecebimentoJSONs[0].codigoUnidade === "1" || form.itemManifestoRecebimentoJSONs[0].codigoUnidade === "2") && (
-              renderInputField(
-                "Valor da Densidade *",
-                "item.tipoDensidadeValor",
-                "number",
-                "",
-                true
-              )
-            )}
-          </div>
-        </div>
-
-        <div className="flex justify-end">
-          <button 
-            type="submit" 
-            className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+      <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 mb-6">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-semibold text-gray-700">Lista de MTRs</h3>
+          <button
+            onClick={limparDados}
+            className="text-sm text-red-600 hover:text-red-800 flex items-center"
           >
-            Enviar Manifesto
+            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+            Limpar dados
           </button>
         </div>
-      </form>
+        
+        <textarea
+          ref={textareaRef}
+          className={`w-full p-3 border rounded-md focus:ring-2 focus:outline-none transition-colors duration-200
+            ${mtrsInvalidos.length > 0 || mtrsDuplicados.length > 0 ? 
+              'border-red-300 focus:ring-red-500 focus:border-red-500' : 
+              'border-gray-300 focus:ring-blue-500 focus:border-blue-500'}`}
+          rows={4}
+          placeholder="Digite ou cole os MTRs (apenas os 10 primeiros dígitos serão considerados)"
+          onChange={handleTextareaChange}
+          onKeyDown={handleTextareaKeyDown}
+          onPaste={handlePaste}
+        />
+        
+        <div className="flex flex-wrap items-center gap-4 mt-4">
+          <button 
+            className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors 
+              disabled:bg-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            onClick={consultarMtrs}
+            disabled={consultando || mtrsSelecionados.length === 0}
+          >
+            {consultando ? (
+              <span className="flex items-center justify-center">
+                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Consultando...
+              </span>
+            ) : 'Consultar MTRs'}
+          </button>
+          
+          <div className="text-sm text-gray-600">
+            {mtrsSelecionados.length > 0 ? (
+              <span className="font-medium text-blue-600">
+                {mtrsSelecionados.length} MTR(s) únicos prontos para consulta
+              </span>
+            ) : 'Digite ou cole os códigos MTR'}
+          </div>
+        </div>
+        
+        {mtrsDuplicados.length > 0 && (
+          <div className="mt-4">
+            <p className="text-sm font-medium text-yellow-700 mb-2">
+              {mtrsDuplicados.length} MTR(s) duplicados (removidos automaticamente):
+            </p>
+            <div className="max-h-40 overflow-y-auto border border-yellow-200 rounded-md p-3 bg-yellow-50">
+              {mtrsDuplicados.map((mtr, index) => (
+                <div key={index} className="text-sm text-yellow-700 mb-1 flex items-start">
+                  <span className="inline-block mr-2 mt-0.5">
+                    <svg className="h-4 w-4 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                  </span>
+                  <span className="font-mono bg-yellow-100 px-1 rounded">{mtr}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        
+        {mtrsValidos.length > 0 && (
+          <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-md">
+            <p className="text-sm font-medium text-green-800">
+              {mtrsValidos.length} MTR(s) válidos prontos para envio.
+            </p>
+          </div>
+        )}
+        
+        {mtrsInvalidos.length > 0 && (
+          <div className="mt-4">
+            <p className="text-sm font-medium text-red-700 mb-2">
+              {mtrsInvalidos.length} MTR(s) com problemas:
+            </p>
+            <div className="max-h-40 overflow-y-auto border border-red-200 rounded-md p-3 bg-red-50">
+              {mtrsInvalidos.map((mtr, index) => (
+                <div key={index} className="text-sm text-red-600 mb-1 flex items-start">
+                  <span className="inline-block mr-2 mt-0.5">
+                    <svg className="h-4 w-4 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </span>
+                  <span>
+                    <span className="font-mono bg-red-100 px-1 rounded">{mtr.codigo}</span> - {mtr.erro}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {mtrsValidos.length > 0 && (
+        <>
+          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 mb-6">
+            <h3 className="text-lg font-semibold mb-4 text-gray-700">Informações do Recebimento</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {renderInputField("Placa do Veículo", "placaVeiculo", "text", "ABC-1234", true)}
+              {renderInputField("Nome do Motorista", "nomeMotorista", "text", "", true)}
+              {renderInputField("Data de Recebimento", "recebimentoMtrData", "date", "", true)}
+              {renderInputField(
+                "Quantidade Total Recebida (será dividida entre os MTRs)", 
+                "qtdRecebida", 
+                "text", 
+                "Ex: 10.5", 
+                true,
+                "md:col-span-1"
+              )}
+              
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Observações</label>
+                <textarea
+                  name="recebimentoMtrObs"
+                  value={form.recebimentoMtrObs}
+                  onChange={handleChange}
+                  className={`w-full p-2 text-sm border rounded-md transition-colors duration-200
+                    ${errors.recebimentoMtrObs ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 
+                      'border-gray-300 focus:ring-blue-500 focus:border-blue-500'}
+                    focus:outline-none focus:ring-2`}
+                  rows={2}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="flex justify-end space-x-4">
+            <button 
+              className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition-colors 
+                focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              onClick={gerarObjetoFinal}
+            >
+              Gerar JSON Final
+            </button>
+            <button 
+              className="bg-green-600 text-white px-6 py-2 rounded-md hover:bg-green-700 transition-colors 
+                focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+              onClick={handleEnviarDados}
+            >
+              Enviar para FEPAM
+            </button>
+          </div>
+        </>
+      )}
     </div>
   );
 }
