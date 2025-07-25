@@ -40,3 +40,15 @@ export async function buscarListas() {
     throw error;
   }
 }
+
+
+export async function enviarMtr(payload: any) {
+  try {
+    const resultado = await enviarMtrLote(payload);
+    return { success: true, data: resultado };
+  } catch (error: any) {
+    return { success: false, message: error?.response?.data || error.message };
+  }
+}
+
+
