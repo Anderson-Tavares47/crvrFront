@@ -267,6 +267,10 @@ export default function MtrForm() {
     setGerandoPDF(false);
   };
 
+  const handleSendMtr = async () => {
+    window.location.href = '/receberManifesto';
+    };
+
   return (
     <div className="w-full px-4 mt-8">
       <form onSubmit={handleSubmit} className="max-w-2xl mx-auto space-y-4">
@@ -280,7 +284,7 @@ export default function MtrForm() {
         />
         {erroInput && <p className="text-red-500 text-sm mt-1">{erroInput}</p>}
 
-        <div className="flex flex-wrap gap-4">
+        <div className="flex flex-wrap gap-2">
           <button
             type="submit"
             className="flex-1 bg-blue-600 text-white py-3 rounded-md hover:bg-blue-700 transition"
@@ -320,6 +324,12 @@ export default function MtrForm() {
             ) : (
               'Gerar Relatório (PDF)'
             )}
+          </button>
+          <button
+             onClick={handleSendMtr}
+            className="flex-1 bg-blue-600 text-white py-3 rounded-md hover:bg-blue-700 transition"
+          >
+            Baixar MTR
           </button>
         </div>
       </form>
