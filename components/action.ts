@@ -1,6 +1,7 @@
 'use server';
 
 import { buscarManifestoMTR } from "../core/consultaMtr";
+import { enviarMtrLote } from "../core/enviarMtr";
 import { obterListaAcondicionamento, obterListaClasse, obterListaEstadoFisico, obterListaResiduo, obterListaTecnologia, obterListaUnidades } from "../core/listas";
 
 export async function consultarMtrServer(numeroMtr: string) {
