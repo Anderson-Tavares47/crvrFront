@@ -190,21 +190,35 @@ export default function MtrBaixaPage() {
     }
   };
 
-  const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const value = e.target.value;
-    const lines = value.split('\n');
-    let processedLines: string[] = [];
+  // const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+  //   const value = e.target.value;
+  //   const lines = value.split('\n');
+  //   let processedLines: string[] = [];
     
-    lines.forEach(line => {
-      const numbers = line.replace(/\D/g, '').substring(0, 10);
-      if (numbers) processedLines.push(numbers);
-    });
+  //   lines.forEach(line => {
+  //     const numbers = line.replace(/\D/g, '').substring(0, 10);
+  //     if (numbers) processedLines.push(numbers);
+  //   });
 
-    const { unicos, duplicados } = processarMTRs(processedLines);
-    setMtrsSelecionados(unicos);
-    setMtrsDuplicados(duplicados);
-    e.target.value = unicos.join('\n');
-  };
+  //   const { unicos, duplicados } = processarMTRs(processedLines);
+  //   setMtrsSelecionados(unicos);
+  //   setMtrsDuplicados(duplicados);
+  //   e.target.value = unicos.join('\n');
+  // };
+
+  const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+  const value = e.target.value;
+  const lines = value.split('\n');
+  const processedLines = lines.map(line => {
+    const numbers = line.replace(/\D/g, '').substring(0, 10);
+    return numbers;
+  }).filter(Boolean);
+
+  const { unicos, duplicados } = processarMTRs(processedLines);
+  setMtrsSelecionados(unicos);
+  setMtrsDuplicados(duplicados);
+  e.target.value = unicos.join('\n');
+};
 
   const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
     e.preventDefault();
