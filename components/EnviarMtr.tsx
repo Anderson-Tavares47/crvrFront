@@ -35,7 +35,7 @@ interface MtrError {
 }
 
 export default function MtrBaixaPage() {
-  const [,setListas] = useState({
+  const [, setListas] = useState({
     acondicionamentos: [] as ListaItem[],
     classes: [] as ListaItem[],
     estadosFisicos: [] as ListaItem[],
@@ -82,7 +82,7 @@ export default function MtrBaixaPage() {
       }
     }
     carregarListas();
-    
+
     if (textareaRef.current) {
       textareaRef.current.focus();
     }
@@ -127,21 +127,21 @@ export default function MtrBaixaPage() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    
+
     if (name === 'qtdRecebida') {
       if (!/^\d*\.?\d*$/.test(value) && value !== '') {
         return;
       }
     }
-    
+
     setForm(prev => ({
       ...prev,
       [name]: value
     }));
-    
+
     if (errors[name]) {
       setErrors(prev => {
-        const newErrors = {...prev};
+        const newErrors = { ...prev };
         delete newErrors[name];
         return newErrors;
       });
@@ -150,7 +150,7 @@ export default function MtrBaixaPage() {
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
-    
+
     if (!form.placaVeiculo.trim()) newErrors.placaVeiculo = "Placa do veículo é obrigatória";
     if (!form.nomeMotorista.trim()) newErrors.nomeMotorista = "Nome do motorista é obrigatório";
     if (!form.recebimentoMtrData) newErrors.recebimentoMtrData = "Data de recebimento é obrigatória";
@@ -159,7 +159,7 @@ export default function MtrBaixaPage() {
     } else if (!/^\d+(\.\d{1,3})?$/.test(form.qtdRecebida)) {
       newErrors.qtdRecebida = "Quantidade deve ser numérica (ex: 10 ou 10.5)";
     }
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -185,64 +185,79 @@ export default function MtrBaixaPage() {
   };
 
   const handleTextareaKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (!/[0-9]|Backspace|Delete|ArrowLeft|ArrowRight|ArrowUp|ArrowDown|Tab|Enter/.test(e.key)) {
-      e.preventDefault();
+    // Permite todas as teclas numéricas, de controle e navegação
+    if (/[0-9]|Backspace|Delete|ArrowLeft|ArrowRight|ArrowUp|ArrowDown|Tab|Enter|Home|End|PageUp|PageDown/.test(e.key)) {
+      return;
     }
+
+    // Permite combinações de teclas (Ctrl+C, Ctrl+V, etc)
+    if (e.ctrlKey || e.metaKey || e.altKey) {
+      return;
+    }
+
+    // Bloqueia qualquer outra tecla
+    e.preventDefault();
   };
 
-  // const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-  //   const value = e.target.value;
-  //   const lines = value.split('\n');
-  //   let processedLines: string[] = [];
-    
-  //   lines.forEach(line => {
-  //     const numbers = line.replace(/\D/g, '').substring(0, 10);
-  //     if (numbers) processedLines.push(numbers);
-  //   });
-
-  //   const { unicos, duplicados } = processarMTRs(processedLines);
-  //   setMtrsSelecionados(unicos);
-  //   setMtrsDuplicados(duplicados);
-  //   e.target.value = unicos.join('\n');
-  // };
-
   const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-  const value = e.target.value;
-  const lines = value.split('\n');
-  const processedLines = lines.map(line => {
-    const numbers = line.replace(/\D/g, '').substring(0, 10);
-    return numbers;
-  }).filter(Boolean);
+    const value = e.target.value;
 
-  const { unicos, duplicados } = processarMTRs(processedLines);
-  setMtrsSelecionados(unicos);
-  setMtrsDuplicados(duplicados);
-  e.target.value = unicos.join('\n');
-};
+    // Processa cada linha mantendo as quebras originais
+    const lines = value.split('\n');
+    const processedLines = lines.map(line => {
+      // Extrai apenas os números e pega os 10 primeiros dígitos
+      const numbers = line.replace(/\D/g, '').substring(0, 10);
+      return numbers;
+    });
+
+    // Junta novamente com quebras de linha
+    e.target.value = processedLines.join('\n');
+
+    // Processa os MTRs válidos
+    const validMtrs = processedLines.filter(line => line.length > 0);
+    const { unicos, duplicados } = processarMTRs(validMtrs);
+    setMtrsSelecionados(unicos);
+    setMtrsDuplicados(duplicados);
+
+    // Força o cursor para o final (para evitar problemas com a formatação)
+    setTimeout(() => {
+      if (textareaRef.current) {
+        textareaRef.current.selectionStart = textareaRef.current.selectionEnd = textareaRef.current.value.length;
+      }
+    }, 0);
+  };
 
   const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
     e.preventDefault();
-    const pastedText = e.clipboardData.getData('text');
-    const numbers = pastedText.replace(/\D/g, '');
-    
-    const chunks = [];
-    for (let i = 0; i < numbers.length; i += 10) {
-      const chunk = numbers.substring(i, i + 10);
-      if (chunk) chunks.push(chunk);
-    }
+    const pastedText = e.clipboardData.getData('text/plain');
 
-    const { unicos, duplicados } = processarMTRs([...mtrsSelecionados, ...chunks]);
+    // Processa o texto colado
+    const lines = pastedText.split(/\r?\n/); // Divide por quebras de linha
+    const numbers = lines.flatMap(line => {
+      // Extrai todos os números de cada linha (permite múltiplos números por linha)
+      const matches = line.match(/\d+/g) || [];
+      return matches.map(num => num.substring(0, 10)); // Pega os 10 primeiros dígitos de cada número
+    }).filter(num => num.length > 0); // Filtra números vazios
+
+    // Combina com os MTRs já existentes
+    const currentMtrs = textareaRef.current?.value.split('\n').filter(Boolean) || [];
+    const allMtrs = [...currentMtrs, ...numbers];
+
+    const { unicos, duplicados } = processarMTRs(allMtrs);
     setMtrsSelecionados(unicos);
     setMtrsDuplicados(duplicados);
-    
+
     if (textareaRef.current) {
+      // Atualiza o textarea mantendo as quebras de linha
       textareaRef.current.value = unicos.join('\n');
+      // Mantém o cursor no final
+      textareaRef.current.selectionStart = textareaRef.current.selectionEnd = textareaRef.current.value.length;
     }
   };
 
   async function consultarMtrs() {
     const { unicos, duplicados } = processarMTRs(mtrsSelecionados);
-    
+
     if (unicos.length === 0) {
       alert("Por favor, insira pelo menos um MTR válido para consulta");
       return;
@@ -266,64 +281,64 @@ export default function MtrBaixaPage() {
 
     for (const codigo of unicos) {
       try {
-        const res = await fetch('https://crvr-back.vercel.app/api/mtr/manifesto-pdf', { 
+        const res = await fetch('https://crvr-back.vercel.app/api/mtr/manifesto-pdf', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ manifestoCodigo: codigo }),
         });
 
         const data = await res.json();
-        
+
         switch (res.status) {
           case STATUS.OK:
             if (data.validation?.isValid) {
               resultados.push(data.data);
             } else {
-              erros.push({ 
-                codigo, 
-                erro: "MTR inválido (validação falhou)" 
+              erros.push({
+                codigo,
+                erro: "MTR inválido (validação falhou)"
               });
             }
             break;
-            
+
           case STATUS.RECEBIDO:
-            erros.push({ 
-              codigo, 
-              erro: "MTR já recebido anteriormente (Status 405 - Recebido)" 
+            erros.push({
+              codigo,
+              erro: "MTR já recebido anteriormente (Status 405 - Recebido)"
             });
             break;
-            
+
           case STATUS.CANCELADO:
-            erros.push({ 
-              codigo, 
-              erro: "MTR cancelado (Status 406 - Cancelado)" 
+            erros.push({
+              codigo,
+              erro: "MTR cancelado (Status 406 - Cancelado)"
             });
             break;
-            
+
           case STATUS.DESTINADOR_INVALIDO:
-            erros.push({ 
-              codigo, 
-              erro: "CNPJ do destinador não corresponde ao gerador (Status 407)" 
+            erros.push({
+              codigo,
+              erro: "CNPJ do destinador não corresponde ao gerador (Status 407)"
             });
             break;
-            
+
           case STATUS.TEMPORARIO:
-            erros.push({ 
-              codigo, 
-              erro: "MTR temporário não pode ser recebido (Status 405 - Temporário)" 
+            erros.push({
+              codigo,
+              erro: "MTR temporário não pode ser recebido (Status 405 - Temporário)"
             });
             break;
-            
+
           default:
-            erros.push({ 
-              codigo, 
-              erro: `Erro desconhecido (Status ${res.status})` 
+            erros.push({
+              codigo,
+              erro: `Erro desconhecido (Status ${res.status})`
             });
         }
       } catch {
-        erros.push({ 
-          codigo, 
-          erro: "Falha na conexão com o servidor" 
+        erros.push({
+          codigo,
+          erro: "Falha na conexão com o servidor"
         });
       }
     }
@@ -332,7 +347,7 @@ export default function MtrBaixaPage() {
       const dataTransporte = resultados[0].dataTransporte || new Date().toLocaleDateString('pt-BR');
       const [dia, mes, ano] = dataTransporte.split('/');
       const dataFormatada = `${ano}${mes.padStart(2, '0')}${dia.padStart(2, '0')}`;
-      
+
       setForm(prev => ({
         ...prev,
         transporteMtrData: dataFormatada
@@ -354,7 +369,7 @@ export default function MtrBaixaPage() {
     const formatDate = (dateString: string) => {
       if (!dateString) return '';
       if (/^\d{8}$/.test(dateString)) return dateString;
-      
+
       const date = new Date(dateString);
       date.setMinutes(date.getMinutes() + date.getTimezoneOffset());
       const year = date.getFullYear();
@@ -434,7 +449,7 @@ export default function MtrBaixaPage() {
           onChange={handleChange}
           placeholder={placeholder}
           className={`w-full p-2 text-sm border rounded-md transition-colors duration-200
-            ${error ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 
+            ${error ? 'border-red-500 focus:ring-red-500 focus:border-red-500' :
               'border-gray-300 focus:ring-blue-500 focus:border-blue-500'}
             focus:outline-none focus:ring-2`}
         />
@@ -468,22 +483,22 @@ export default function MtrBaixaPage() {
             Limpar dados
           </button>
         </div>
-        
+
         <textarea
           ref={textareaRef}
           className={`w-full p-3 border rounded-md focus:ring-2 focus:outline-none transition-colors duration-200
-            ${mtrsInvalidos.length > 0 || mtrsDuplicados.length > 0 ? 
-              'border-red-300 focus:ring-red-500 focus:border-red-500' : 
+            ${mtrsInvalidos.length > 0 || mtrsDuplicados.length > 0 ?
+              'border-red-300 focus:ring-red-500 focus:border-red-500' :
               'border-gray-300 focus:ring-blue-500 focus:border-blue-500'}`}
-          rows={4}
-          placeholder="Digite ou cole os MTRs (apenas os 10 primeiros dígitos serão considerados)"
+          rows={8}
+          placeholder="Digite ou cole os MTRs (um por linha ou separados por espaços/tabs)\nApenas os 10 primeiros dígitos serão considerados"
           onChange={handleTextareaChange}
           onKeyDown={handleTextareaKeyDown}
           onPaste={handlePaste}
         />
-        
+
         <div className="flex flex-wrap items-center gap-4 mt-4">
-          <button 
+          <button
             className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors 
               disabled:bg-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
             onClick={consultarMtrs}
@@ -499,7 +514,7 @@ export default function MtrBaixaPage() {
               </span>
             ) : 'Consultar MTRs'}
           </button>
-          
+
           <div className="text-sm text-gray-600">
             {mtrsSelecionados.length > 0 ? (
               <span className="font-medium text-blue-600">
@@ -508,7 +523,7 @@ export default function MtrBaixaPage() {
             ) : 'Digite ou cole os códigos MTR'}
           </div>
         </div>
-        
+
         {mtrsDuplicados.length > 0 && (
           <div className="mt-4">
             <p className="text-sm font-medium text-yellow-700 mb-2">
@@ -528,7 +543,7 @@ export default function MtrBaixaPage() {
             </div>
           </div>
         )}
-        
+
         {mtrsValidos.length > 0 && (
           <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-md">
             <p className="text-sm font-medium text-green-800">
@@ -536,7 +551,7 @@ export default function MtrBaixaPage() {
             </p>
           </div>
         )}
-        
+
         {mtrsInvalidos.length > 0 && (
           <div className="mt-4">
             <p className="text-sm font-medium text-red-700 mb-2">
@@ -569,14 +584,14 @@ export default function MtrBaixaPage() {
               {renderInputField("Nome do Motorista", "nomeMotorista", "text", "", true)}
               {renderInputField("Data de Recebimento", "recebimentoMtrData", "date", "", true)}
               {renderInputField(
-                "Quantidade Total Recebida (será dividida entre os MTRs)", 
-                "qtdRecebida", 
-                "text", 
-                "Ex: 10.5", 
+                "Quantidade Total Recebida (será dividida entre os MTRs)",
+                "qtdRecebida",
+                "text",
+                "Ex: 10.5",
                 true,
                 "md:col-span-1"
               )}
-              
+
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Observações</label>
                 <textarea
@@ -584,7 +599,7 @@ export default function MtrBaixaPage() {
                   value={form.recebimentoMtrObs}
                   onChange={handleChange}
                   className={`w-full p-2 text-sm border rounded-md transition-colors duration-200
-                    ${errors.recebimentoMtrObs ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 
+                    ${errors.recebimentoMtrObs ? 'border-red-500 focus:ring-red-500 focus:border-red-500' :
                       'border-gray-300 focus:ring-blue-500 focus:border-blue-500'}
                     focus:outline-none focus:ring-2`}
                   rows={2}
@@ -594,14 +609,14 @@ export default function MtrBaixaPage() {
           </div>
 
           <div className="flex justify-end space-x-4">
-            <button 
+            <button
               className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition-colors 
                 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
               onClick={gerarObjetoFinal}
             >
               Gerar JSON Final
             </button>
-            <button 
+            <button
               className="bg-green-600 text-white px-6 py-2 rounded-md hover:bg-green-700 transition-colors 
                 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
               onClick={handleEnviarDados}
