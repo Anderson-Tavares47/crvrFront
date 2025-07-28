@@ -34,6 +34,13 @@ interface MtrError {
   erro: string;
 }
 
+interface RetornoErro {
+  manifestoCodigo: string | number;
+  retornoCodigo: number;
+  retorno: string;
+  [key: string]: any;
+}
+
 export default function MtrBaixaPage() {
   const [, setListas] = useState({
     acondicionamentos: [] as ListaItem[],
@@ -48,6 +55,7 @@ export default function MtrBaixaPage() {
   const [mtrsSelecionados, setMtrsSelecionados] = useState<string[]>([]);
   const [mtrsValidos, setMtrsValidos] = useState<MTRResponse[]>([]);
   const [mtrsInvalidos, setMtrsInvalidos] = useState<MtrError[]>([]);
+  const [retornosErro, setRetornosErro] = useState<RetornoErro[]>([]);
   const [form, setForm] = useState({
     placaVeiculo: '',
     nomeMotorista: '',
@@ -93,6 +101,7 @@ export default function MtrBaixaPage() {
     setMtrsValidos([]);
     setMtrsInvalidos([]);
     setMtrsDuplicados([]);
+    setRetornosErro([]);
     setForm({
       placaVeiculo: '',
       nomeMotorista: '',
@@ -114,14 +123,64 @@ export default function MtrBaixaPage() {
     const payload = gerarObjetoFinal();
     if (!payload) return;
 
-    const resposta = await enviarMtr(payload);
+    try {
+      const resposta = await enviarMtr(payload);
 
-    if (resposta.success) {
-      alert("MTRs enviados com sucesso!");
-      console.log("Resposta da FEPAM via backend:", resposta.data);
-      limparDados();
-    } else {
-      alert("Erro ao enviar MTRs: " + resposta.message);
+      if (!resposta) {
+        throw new Error("Resposta vazia recebida do servidor");
+      }
+
+      if (resposta.success) {      
+        if (resposta.data && typeof resposta.data === 'object') {
+          const manifestos = resposta.data.data.manifestoRecebimentoJSONs || [];
+          
+          if (Array.isArray(manifestos)) {
+            const erros = manifestos.filter(
+              (item: any) => item.retornoCodigo !== undefined && item.retornoCodigo !== 0
+            );
+          
+            setRetornosErro(erros);
+
+            if (erros.length === 0) {
+              alert("Todos os MTRs foram processados com sucesso!");
+              limparDados();
+            } else {
+              alert(`Processamento concluído com ${erros.length} erro(s). Verifique os detalhes abaixo.`);
+            }
+          } else {
+            console.warn("Formato de manifestos inesperado:", manifestos);
+            setRetornosErro([{
+              manifestoCodigo: 'N/A',
+              retornoCodigo: -2,
+              retorno: 'Formato de dados inesperado na resposta'
+            }]);
+          }
+        } else {
+          console.warn("Estrutura de dados inesperada:", resposta.data);
+          setRetornosErro([{
+            manifestoCodigo: 'N/A',
+            retornoCodigo: -1,
+            retorno: 'Resposta do servidor em formato inesperado'
+          }]);
+        }
+      } else {
+        const errorMessage = resposta.message || 'Erro desconhecido ao enviar MTRs';
+        alert(`Erro ao enviar MTRs: ${errorMessage}`);
+        setRetornosErro([{
+          manifestoCodigo: 'N/A',
+          retornoCodigo: -1,
+          retorno: errorMessage
+        }]);
+      }
+    } catch (error) {
+      console.error("Erro no envio:", error);
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+      alert(`Erro ao comunicar com o servidor: ${errorMessage}`);
+      setRetornosErro([{
+        manifestoCodigo: 'N/A',
+        retornoCodigo: -1,
+        retorno: errorMessage
+      }]);
     }
   }
 
@@ -148,12 +207,27 @@ export default function MtrBaixaPage() {
     }
   };
 
+  const formatDate = (dateString: string) => {
+    if (!dateString) return '';
+    if (/^\d{8}$/.test(dateString)) return dateString;
+    
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return '';
+    
+    date.setMinutes(date.getMinutes() + date.getTimezoneOffset());
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}${month}${day}`;
+  };
+
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
 
     if (!form.placaVeiculo.trim()) newErrors.placaVeiculo = "Placa do veículo é obrigatória";
     if (!form.nomeMotorista.trim()) newErrors.nomeMotorista = "Nome do motorista é obrigatório";
     if (!form.recebimentoMtrData) newErrors.recebimentoMtrData = "Data de recebimento é obrigatória";
+    if (!form.transporteMtrData) newErrors.transporteMtrData = "Data de transporte é obrigatória";
     if (!form.qtdRecebida) {
       newErrors.qtdRecebida = "Quantidade recebida é obrigatória";
     } else if (!/^\d+(\.\d{1,3})?$/.test(form.qtdRecebida)) {
@@ -185,41 +259,31 @@ export default function MtrBaixaPage() {
   };
 
   const handleTextareaKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    // Permite todas as teclas numéricas, de controle e navegação
     if (/[0-9]|Backspace|Delete|ArrowLeft|ArrowRight|ArrowUp|ArrowDown|Tab|Enter|Home|End|PageUp|PageDown/.test(e.key)) {
       return;
     }
 
-    // Permite combinações de teclas (Ctrl+C, Ctrl+V, etc)
     if (e.ctrlKey || e.metaKey || e.altKey) {
       return;
     }
 
-    // Bloqueia qualquer outra tecla
     e.preventDefault();
   };
 
   const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
-
-    // Processa cada linha mantendo as quebras originais
     const lines = value.split('\n');
     const processedLines = lines.map(line => {
-      // Extrai apenas os números e pega os 10 primeiros dígitos
       const numbers = line.replace(/\D/g, '').substring(0, 10);
       return numbers;
     });
 
-    // Junta novamente com quebras de linha
     e.target.value = processedLines.join('\n');
-
-    // Processa os MTRs válidos
     const validMtrs = processedLines.filter(line => line.length > 0);
     const { unicos, duplicados } = processarMTRs(validMtrs);
     setMtrsSelecionados(unicos);
     setMtrsDuplicados(duplicados);
 
-    // Força o cursor para o final (para evitar problemas com a formatação)
     setTimeout(() => {
       if (textareaRef.current) {
         textareaRef.current.selectionStart = textareaRef.current.selectionEnd = textareaRef.current.value.length;
@@ -230,16 +294,12 @@ export default function MtrBaixaPage() {
   const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
     e.preventDefault();
     const pastedText = e.clipboardData.getData('text/plain');
-
-    // Processa o texto colado
-    const lines = pastedText.split(/\r?\n/); // Divide por quebras de linha
+    const lines = pastedText.split(/\r?\n/);
     const numbers = lines.flatMap(line => {
-      // Extrai todos os números de cada linha (permite múltiplos números por linha)
       const matches = line.match(/\d+/g) || [];
-      return matches.map(num => num.substring(0, 10)); // Pega os 10 primeiros dígitos de cada número
-    }).filter(num => num.length > 0); // Filtra números vazios
+      return matches.map(num => num.substring(0, 10));
+    }).filter(num => num.length > 0);
 
-    // Combina com os MTRs já existentes
     const currentMtrs = textareaRef.current?.value.split('\n').filter(Boolean) || [];
     const allMtrs = [...currentMtrs, ...numbers];
 
@@ -248,9 +308,7 @@ export default function MtrBaixaPage() {
     setMtrsDuplicados(duplicados);
 
     if (textareaRef.current) {
-      // Atualiza o textarea mantendo as quebras de linha
       textareaRef.current.value = unicos.join('\n');
-      // Mantém o cursor no final
       textareaRef.current.selectionStart = textareaRef.current.selectionEnd = textareaRef.current.value.length;
     }
   };
@@ -343,17 +401,6 @@ export default function MtrBaixaPage() {
       }
     }
 
-    if (resultados.length > 0) {
-      const dataTransporte = resultados[0].dataTransporte || new Date().toLocaleDateString('pt-BR');
-      const [dia, mes, ano] = dataTransporte.split('/');
-      const dataFormatada = `${ano}${mes.padStart(2, '0')}${dia.padStart(2, '0')}`;
-
-      setForm(prev => ({
-        ...prev,
-        transporteMtrData: dataFormatada
-      }));
-    }
-
     setMtrsValidos(resultados);
     setMtrsInvalidos(erros);
     setConsultando(false);
@@ -366,21 +413,8 @@ export default function MtrBaixaPage() {
       return;
     }
 
-    const formatDate = (dateString: string) => {
-      if (!dateString) return '';
-      if (/^\d{8}$/.test(dateString)) return dateString;
-
-      const date = new Date(dateString);
-      date.setMinutes(date.getMinutes() + date.getTimezoneOffset());
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-      return `${year}${month}${day}`;
-    };
-
     const limparCNPJ = (cnpj: string) => cnpj.replace(/\D/g, '');
 
-    // const qtdPorManifesto = parseFloat(form.qtdRecebida) / mtrsValidos.length;
     const qtdPorManifesto = parseFloat((parseFloat(form.qtdRecebida) / mtrsValidos.length).toFixed(3));
 
     const payload = {
@@ -401,7 +435,7 @@ export default function MtrBaixaPage() {
           recebimentoMtrResponsavel: form.recebimentoMtrResponsavel,
           recebimentoMtrCargo: form.recebimentoMtrCargo,
           recebimentoMtrData: formatDate(form.recebimentoMtrData),
-          transporteMtrData: form.transporteMtrData,
+          transporteMtrData: formatDate(form.transporteMtrData),
           recebimentoMtrObs: form.recebimentoMtrObs || '',
           nomeMotorista: form.nomeMotorista,
           placaVeiculo: form.placaVeiculo,
@@ -584,6 +618,7 @@ export default function MtrBaixaPage() {
               {renderInputField("Placa do Veículo", "placaVeiculo", "text", "ABC-1234", true)}
               {renderInputField("Nome do Motorista", "nomeMotorista", "text", "", true)}
               {renderInputField("Data de Recebimento", "recebimentoMtrData", "date", "", true)}
+              {renderInputField("Data de Transporte", "transporteMtrData", "date", "", true)}
               {renderInputField(
                 "Quantidade Total Recebida (será dividida entre os MTRs)",
                 "qtdRecebida",
@@ -625,6 +660,29 @@ export default function MtrBaixaPage() {
               Enviar para FEPAM
             </button>
           </div>
+
+          {retornosErro.length > 0 && (
+            <div className="mt-6 bg-red-50 border border-red-300 rounded-lg p-4">
+              <div className="flex justify-between items-center mb-2">
+                <h3 className="text-red-700 font-semibold">Erros no processamento:</h3>
+                <button 
+                  onClick={() => setRetornosErro([])}
+                  className="text-sm text-red-600 hover:text-red-800"
+                >
+                  Limpar erros
+                </button>
+              </div>
+              <ul className="space-y-2 text-sm text-red-800">
+                {retornosErro.map((retorno, index) => (
+                  <li key={index} className="border border-red-200 rounded-md p-2 bg-white">
+                    <p><strong>MTR:</strong> {retorno.manifestoCodigo}</p>
+                    <p><strong>Código:</strong> {retorno.retornoCodigo}</p>
+                    <p><strong>Mensagem:</strong> {retorno.retorno}</p>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </>
       )}
     </div>
