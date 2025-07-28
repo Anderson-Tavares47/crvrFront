@@ -380,7 +380,8 @@ export default function MtrBaixaPage() {
 
     const limparCNPJ = (cnpj: string) => cnpj.replace(/\D/g, '');
 
-    const qtdPorManifesto = parseFloat(form.qtdRecebida) / mtrsValidos.length;
+    // const qtdPorManifesto = parseFloat(form.qtdRecebida) / mtrsValidos.length;
+    const qtdPorManifesto = parseFloat((parseFloat(form.qtdRecebida) / mtrsValidos.length).toFixed(3));
 
     const payload = {
       login: '12345678901',
