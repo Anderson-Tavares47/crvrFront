@@ -503,47 +503,40 @@ export default function MtrBaixaPage() {
 
   const limparCNPJ = (cnpj: string) => cnpj.replace(/\D/g, '');
 
-  const qtdRecebidaNumerica = parseNumberWithCommas(form.qtdRecebida);
-  const qtdPorManifesto = parseFloat((qtdRecebidaNumerica / mtrsValidos.length).toFixed(3));
+  // Converter de kg para toneladas (dividir por 1000)
+  const qtdRecebidaEmToneladas = parseNumberWithCommas(form.qtdRecebida) / 1000;
+  const qtdPorManifesto = parseFloat((qtdRecebidaEmToneladas / mtrsValidos.length).toFixed(6));
 
   const payload = {
     login: '02661308016',
     senha: 'saoleopoldo2021',
     cnp: '03505185000346',
-    manifestoRecebimentoJSONs: mtrsValidos.map((m) => {
-      const codigoEstadoFisico = m.residuo.estadoFisico === 'Sólido' ? 1 : 2;
-      const codigoClasse = m.residuo.classe === 'IIA' ? 3 : 1;
-      const codigoTecnologia = m.residuo.tecnologia === 'Aterro' ? 7 : 5;
-      const codigoUnidade = m.residuo.unidade === 'Tonelada' ? 4 : 1;
-      const codigoAcondicionamento = 1;
-
-      return {
-        manifestoCodigo: m.numeroMTR,
-        cnpGerador: limparCNPJ(m.gerador?.cnpj || ''),
-        cnpTransportador: limparCNPJ(m.transportador?.cnpj || ''),
-        recebimentoMtrResponsavel: form.recebimentoMtrResponsavel,
-        recebimentoMtrCargo: form.recebimentoMtrCargo,
-        recebimentoMtrData: formatDate(form.recebimentoMtrData),
-        transporteMtrData: formatDate(form.transporteMtrData),
-        recebimentoMtrObs: form.recebimentoMtrObs || '',
-        nomeMotorista: form.nomeMotorista,
-        placaVeiculo: form.placaVeiculo,
-        itemManifestoRecebimentoJSONs: [
-          {
-            codigoSequencial: 1,
-            justificativa: null,
-            codigoInterno: null,
-            qtdRecebida: qtdPorManifesto, // Mantemos como número (com ponto)
-            residuo: m.residuo?.codigoIbama?.replace(/\D/g, '') || '',
-            codigoAcondicionamento: codigoAcondicionamento,
-            codigoClasse: codigoClasse,
-            codigoTecnologia: codigoTecnologia,
-            codigoTipoEstado: codigoEstadoFisico,
-            codigoUnidade: codigoUnidade
-          }
-        ]
-      };
-    })
+    manifestoRecebimentoJSONs: mtrsValidos.map((m) => ({
+      manifestoCodigo: m.numeroMTR,
+      cnpGerador: limparCNPJ(m.gerador?.cnpj || ''),
+      cnpTransportador: limparCNPJ(m.transportador?.cnpj || ''),
+      recebimentoMtrResponsavel: form.recebimentoMtrResponsavel,
+      recebimentoMtrCargo: form.recebimentoMtrCargo,
+      recebimentoMtrData: formatDate(form.recebimentoMtrData),
+      transporteMtrData: formatDate(form.transporteMtrData),
+      recebimentoMtrObs: form.recebimentoMtrObs || '',
+      nomeMotorista: form.nomeMotorista,
+      placaVeiculo: form.placaVeiculo,
+      itemManifestoRecebimentoJSONs: [
+        {
+          codigoSequencial: 1,
+          justificativa: null,
+          codigoInterno: null,
+          qtdRecebida: qtdPorManifesto, // Já em toneladas
+          residuo: m.residuo?.codigoIbama?.replace(/\D/g, '') || '',
+          codigoAcondicionamento: 1,
+          codigoClasse: m.residuo.classe === 'IIA' ? 3 : 1,
+          codigoTecnologia: m.residuo.tecnologia === 'Aterro' ? 7 : 5,
+          codigoTipoEstado: m.residuo.estadoFisico === 'Sólido' ? 1 : 2,
+          codigoUnidade: m.residuo.unidade === 'Tonelada' ? 4 : 1
+        }
+      ]
+    }))
   };
 
   console.log('Payload para envio:', JSON.stringify(payload, null, 2));
@@ -709,10 +702,10 @@ export default function MtrBaixaPage() {
               {renderInputField("Data de Recebimento", "recebimentoMtrData", "date", "", true)}
               {renderInputField("Data de Transporte", "transporteMtrData", "date", "", true)}
               {renderInputField(
-                "Quantidade Total Recebida (será dividida entre os MTRs)",
+                "Quantidade Total Recebida (kg - será convertida para toneladas)",
                 "qtdRecebida",
                 "text",
-                "Ex: 1,000.5",
+                "Ex: 680 (para 0,680 toneladas)",
                 true,
                 "md:col-span-1"
               )}
