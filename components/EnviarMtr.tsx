@@ -184,43 +184,13 @@ export default function MtrBaixaPage() {
     }
   }
 
-  // const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-  //   const { name, value } = e.target;
-
-  //   if (name === 'qtdRecebida') {
-  //     if (!/^\d*\.?\d*$/.test(value) && value !== '') {
-  //       return;
-  //     }
-  //   }
-
-  //   setForm(prev => ({
-  //     ...prev,
-  //     [name]: value
-  //   }));
-
-  //   if (errors[name]) {
-  //     setErrors(prev => {
-  //       const newErrors = { ...prev };
-  //       delete newErrors[name];
-  //       return newErrors;
-  //     });
-  //   }
-  // };
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-  const { name, value } = e.target;
-
-  if (name === 'qtdRecebida') {
+  const formatNumberWithCommas = (value: string): string => {
     // Remove todos os caracteres não numéricos, exceto ponto decimal
     const rawValue = value.replace(/[^\d.]/g, '');
     
     // Verifica se é um número válido
     if (rawValue === '' || rawValue === '.') {
-      setForm(prev => ({
-        ...prev,
-        [name]: rawValue
-      }));
-      return;
+      return rawValue;
     }
 
     // Divide em partes inteira e decimal
@@ -233,27 +203,37 @@ export default function MtrBaixaPage() {
       integerPart = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
     }
 
-    const formattedValue = integerPart + decimalPart;
+    return integerPart + decimalPart;
+  };
 
-    setForm(prev => ({
-      ...prev,
-      [name]: formattedValue
-    }));
-  } else {
-    setForm(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  }
+  const parseNumberWithCommas = (value: string): number => {
+    return parseFloat(value.replace(/,/g, ''));
+  };
 
-  if (errors[name]) {
-    setErrors(prev => {
-      const newErrors = { ...prev };
-      delete newErrors[name];
-      return newErrors;
-    });
-  }
-};
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+
+    if (name === 'qtdRecebida') {
+      const formattedValue = formatNumberWithCommas(value);
+      setForm(prev => ({
+        ...prev,
+        [name]: formattedValue
+      }));
+    } else {
+      setForm(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    }
+
+    if (errors[name]) {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[name];
+        return newErrors;
+      });
+    }
+  };
 
   const formatDate = (dateString: string) => {
     if (!dateString) return '';
@@ -276,21 +256,15 @@ export default function MtrBaixaPage() {
     if (!form.nomeMotorista.trim()) newErrors.nomeMotorista = "Nome do motorista é obrigatório";
     if (!form.recebimentoMtrData) newErrors.recebimentoMtrData = "Data de recebimento é obrigatória";
     if (!form.transporteMtrData) newErrors.transporteMtrData = "Data de transporte é obrigatória";
-    // if (!form.qtdRecebida) {
-    //   newErrors.qtdRecebida = "Quantidade recebida é obrigatória";
-    // } else if (!/^\d+(\.\d{1,3})?$/.test(form.qtdRecebida)) {
-    //   newErrors.qtdRecebida = "Quantidade deve ser numérica (ex: 10 ou 10.5)";
-    // }
-
+    
     if (!form.qtdRecebida) {
-    newErrors.qtdRecebida = "Quantidade recebida é obrigatória";
-  } else {
-    // Remove vírgulas para validação numérica
-    const numericValue = form.qtdRecebida.replace(/,/g, '');
-    if (!/^\d+(\.\d{1,3})?$/.test(numericValue)) {
-      newErrors.qtdRecebida = "Quantidade deve ser numérica (ex: 1,000 ou 1,000.5)";
+      newErrors.qtdRecebida = "Quantidade recebida é obrigatória";
+    } else {
+      const numericValue = parseNumberWithCommas(form.qtdRecebida);
+      if (isNaN(numericValue) || numericValue <= 0) {
+        newErrors.qtdRecebida = "Quantidade deve ser um número positivo (ex: 1,000 ou 1,000.5)";
+      }
     }
-  }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -473,10 +447,8 @@ export default function MtrBaixaPage() {
 
     const limparCNPJ = (cnpj: string) => cnpj.replace(/\D/g, '');
 
-    // const qtdPorManifesto = parseFloat((parseFloat(form.qtdRecebida) / mtrsValidos.length).toFixed(3));
-
-    const qtdRecebidaNumerica = parseFloat(form.qtdRecebida.replace(/,/g, ''));
-  const qtdPorManifesto = parseFloat((qtdRecebidaNumerica / mtrsValidos.length).toFixed(3));
+    const qtdRecebidaNumerica = parseNumberWithCommas(form.qtdRecebida);
+    const qtdPorManifesto = parseFloat((qtdRecebidaNumerica / mtrsValidos.length).toFixed(3));
 
     const payload = {
       login: '12345678901',
@@ -684,7 +656,7 @@ export default function MtrBaixaPage() {
                 "Quantidade Total Recebida (será dividida entre os MTRs)",
                 "qtdRecebida",
                 "text",
-                "Ex: 10.5",
+                "Ex: 1,000.5",
                 true,
                 "md:col-span-1"
               )}
