@@ -494,7 +494,7 @@ export default function MtrBaixaPage() {
   //   return payload;
   // }
 
-  function gerarObjetoFinal() {
+ function gerarObjetoFinal() {
   if (!validateForm()) return;
   if (mtrsValidos.length === 0) {
     alert("Nenhum MTR válido para gerar o JSON");
@@ -506,15 +506,10 @@ export default function MtrBaixaPage() {
   const qtdRecebidaNumerica = parseNumberWithCommas(form.qtdRecebida);
   const qtdPorManifesto = parseFloat((qtdRecebidaNumerica / mtrsValidos.length).toFixed(3));
 
-  // Função para formatar número com vírgula como separador decimal
-  const formatNumberForJSON = (num: number) => {
-    return num.toString().replace('.', ',');
-  };
-
   const payload = {
-    login: '12345678901',
-    senha: 'fepampass',
-    cnp: '12345678901234',
+    login: '02661308016',
+    senha: 'saoleopoldo2021',
+    cnp: '03505185000346',
     manifestoRecebimentoJSONs: mtrsValidos.map((m) => {
       const codigoEstadoFisico = m.residuo.estadoFisico === 'Sólido' ? 1 : 2;
       const codigoClasse = m.residuo.classe === 'IIA' ? 3 : 1;
@@ -538,7 +533,7 @@ export default function MtrBaixaPage() {
             codigoSequencial: 1,
             justificativa: null,
             codigoInterno: null,
-            qtdRecebida: formatNumberForJSON(qtdPorManifesto), // Aqui aplicamos a formatação
+            qtdRecebida: qtdPorManifesto, // Mantemos como número (com ponto)
             residuo: m.residuo?.codigoIbama?.replace(/\D/g, '') || '',
             codigoAcondicionamento: codigoAcondicionamento,
             codigoClasse: codigoClasse,
