@@ -438,63 +438,59 @@ export default function MtrBaixaPage() {
     setConsultando(false);
   }
 
-  // function gerarObjetoFinal() {
-  //   if (!validateForm()) return;
-  //   if (mtrsValidos.length === 0) {
-  //     alert("Nenhum MTR válido para gerar o JSON");
-  //     return;
-  //   }
+ 
 
-  //   const limparCNPJ = (cnpj: string) => cnpj.replace(/\D/g, '');
+//  function gerarObjetoFinal() {
+//   if (!validateForm()) return;
+//   if (mtrsValidos.length === 0) {
+//     alert("Nenhum MTR válido para gerar o JSON");
+//     return;
+//   }
 
-  //   const qtdRecebidaNumerica = parseNumberWithCommas(form.qtdRecebida);
-  //   const qtdPorManifesto = parseFloat((qtdRecebidaNumerica / mtrsValidos.length).toFixed(3));
+//   const limparCNPJ = (cnpj: string) => cnpj.replace(/\D/g, '');
 
-  //   const payload = {
-  //     login: '12345678901',
-  //     senha: 'fepampass',
-  //     cnp: '12345678901234',
-  //     manifestoRecebimentoJSONs: mtrsValidos.map((m) => {
-  //       const codigoEstadoFisico = m.residuo.estadoFisico === 'Sólido' ? 1 : 2;
-  //       const codigoClasse = m.residuo.classe === 'IIA' ? 3 : 1;
-  //       const codigoTecnologia = m.residuo.tecnologia === 'Aterro' ? 7 : 5;
-  //       const codigoUnidade = m.residuo.unidade === 'Tonelada' ? 4 : 1;
-  //       const codigoAcondicionamento = 1;
+//   // Converter de kg para toneladas (dividir por 1000)
+//   const qtdRecebidaEmToneladas = parseNumberWithCommas(form.qtdRecebida) / 1000;
+//   const qtdPorManifesto = parseFloat((qtdRecebidaEmToneladas / mtrsValidos.length).toFixed(6));
 
-  //       return {
-  //         manifestoCodigo: m.numeroMTR,
-  //         cnpGerador: limparCNPJ(m.gerador?.cnpj || ''),
-  //         cnpTransportador: limparCNPJ(m.transportador?.cnpj || ''),
-  //         recebimentoMtrResponsavel: form.recebimentoMtrResponsavel,
-  //         recebimentoMtrCargo: form.recebimentoMtrCargo,
-  //         recebimentoMtrData: formatDate(form.recebimentoMtrData),
-  //         transporteMtrData: formatDate(form.transporteMtrData),
-  //         recebimentoMtrObs: form.recebimentoMtrObs || '',
-  //         nomeMotorista: form.nomeMotorista,
-  //         placaVeiculo: form.placaVeiculo,
-  //         itemManifestoRecebimentoJSONs: [
-  //           {
-  //             codigoSequencial: 1,
-  //             justificativa: null,
-  //             codigoInterno: null,
-  //             qtdRecebida: qtdPorManifesto,
-  //             residuo: m.residuo?.codigoIbama?.replace(/\D/g, '') || '',
-  //             codigoAcondicionamento: codigoAcondicionamento,
-  //             codigoClasse: codigoClasse,
-  //             codigoTecnologia: codigoTecnologia,
-  //             codigoTipoEstado: codigoEstadoFisico,
-  //             codigoUnidade: codigoUnidade
-  //           }
-  //         ]
-  //       };
-  //     })
-  //   };
+//   const payload = {
+//     login: '02661308016',
+//     senha: 'saoleopoldo2021',
+//     cnp: '03505185000346',
+//     manifestoRecebimentoJSONs: mtrsValidos.map((m) => ({
+//       manifestoCodigo: m.numeroMTR,
+//       cnpGerador: limparCNPJ(m.gerador?.cnpj || ''),
+//       cnpTransportador: limparCNPJ(m.transportador?.cnpj || ''),
+//       recebimentoMtrResponsavel: form.recebimentoMtrResponsavel,
+//       recebimentoMtrCargo: form.recebimentoMtrCargo,
+//       recebimentoMtrData: formatDate(form.recebimentoMtrData),
+//       transporteMtrData: formatDate(form.transporteMtrData),
+//       recebimentoMtrObs: form.recebimentoMtrObs || '',
+//       nomeMotorista: form.nomeMotorista,
+//       placaVeiculo: form.placaVeiculo,
+//       itemManifestoRecebimentoJSONs: [
+//         {
+//           codigoSequencial: 1,
+//           justificativa: null,
+//           codigoInterno: null,
+//           qtdRecebida: qtdPorManifesto, // Já em toneladas
+//           residuo: m.residuo?.codigoIbama?.replace(/\D/g, '') || '',
+//           codigoAcondicionamento: 1,
+//           codigoClasse: m.residuo.classe === 'IIA' ? 3 : 1,
+//           codigoTecnologia: m.residuo.tecnologia === 'Aterro' ? 7 : 5,
+//           codigoTipoEstado: m.residuo.estadoFisico === 'Sólido' ? 1 : 2,
+//           codigoUnidade: m.residuo.unidade === 'Tonelada' ? 4 : 1
+//         }
+//       ]
+//     }))
+//   };
 
-  //   console.log('Payload para envio:', JSON.stringify(payload, null, 2));
-  //   return payload;
-  // }
+//   console.log('Payload para envio:', JSON.stringify(payload, null, 2));
+//   return payload;
+// }
 
- function gerarObjetoFinal() {
+
+  function gerarObjetoFinal() {
   if (!validateForm()) return;
   if (mtrsValidos.length === 0) {
     alert("Nenhum MTR válido para gerar o JSON");
@@ -505,38 +501,74 @@ export default function MtrBaixaPage() {
 
   // Converter de kg para toneladas (dividir por 1000)
   const qtdRecebidaEmToneladas = parseNumberWithCommas(form.qtdRecebida) / 1000;
-  const qtdPorManifesto = parseFloat((qtdRecebidaEmToneladas / mtrsValidos.length).toFixed(6));
-
+  
   const payload = {
     login: '02661308016',
     senha: 'saoleopoldo2021',
     cnp: '03505185000346',
-    manifestoRecebimentoJSONs: mtrsValidos.map((m) => ({
-      manifestoCodigo: m.numeroMTR,
-      cnpGerador: limparCNPJ(m.gerador?.cnpj || ''),
-      cnpTransportador: limparCNPJ(m.transportador?.cnpj || ''),
-      recebimentoMtrResponsavel: form.recebimentoMtrResponsavel,
-      recebimentoMtrCargo: form.recebimentoMtrCargo,
-      recebimentoMtrData: formatDate(form.recebimentoMtrData),
-      transporteMtrData: formatDate(form.transporteMtrData),
-      recebimentoMtrObs: form.recebimentoMtrObs || '',
-      nomeMotorista: form.nomeMotorista,
-      placaVeiculo: form.placaVeiculo,
-      itemManifestoRecebimentoJSONs: [
-        {
-          codigoSequencial: 1,
-          justificativa: null,
-          codigoInterno: null,
-          qtdRecebida: qtdPorManifesto, // Já em toneladas
-          residuo: m.residuo?.codigoIbama?.replace(/\D/g, '') || '',
-          codigoAcondicionamento: 1,
-          codigoClasse: m.residuo.classe === 'IIA' ? 3 : 1,
-          codigoTecnologia: m.residuo.tecnologia === 'Aterro' ? 7 : 5,
-          codigoTipoEstado: m.residuo.estadoFisico === 'Sólido' ? 1 : 2,
-          codigoUnidade: m.residuo.unidade === 'Tonelada' ? 4 : 1
-        }
-      ]
-    }))
+    manifestoRecebimentoJSONs: mtrsValidos.map((m) => {
+      // Calcular a quantidade total de resíduos no MTR (soma de todas as quantidades)
+      const totalResiduosMTR = Array.isArray(m.residuos) 
+        ? m.residuos.reduce((total, residuo) => {
+            const qtd = parseFloat(residuo.quantidade.replace(',', '.'));
+            return total + (isNaN(qtd) ? 0 : qtd);
+          }, 0)
+        : 0;
+
+      // Se não houver resíduos ou a soma for zero, usar 1 como fallback para evitar divisão por zero
+      const divisor = totalResiduosMTR > 0 ? totalResiduosMTR : 1;
+
+      // Calcular a proporção que este MTR deve receber do total
+      const proporcaoMTR = mtrsValidos.length > 0 ? 1 / mtrsValidos.length : 1;
+      
+      // Quantidade total para este MTR (proporção do total recebido)
+      const qtdTotalMTR = qtdRecebidaEmToneladas * proporcaoMTR;
+
+      return {
+        manifestoCodigo: m.numeroMTR,
+        cnpGerador: limparCNPJ(m.gerador?.cnpj || ''),
+        cnpTransportador: limparCNPJ(m.transportador?.cnpj || ''),
+        recebimentoMtrResponsavel: form.recebimentoMtrResponsavel,
+        recebimentoMtrCargo: form.recebimentoMtrCargo,
+        recebimentoMtrData: formatDate(form.recebimentoMtrData),
+        transporteMtrData: formatDate(form.transporteMtrData),
+        recebimentoMtrObs: form.recebimentoMtrObs || '',
+        nomeMotorista: form.nomeMotorista,
+        placaVeiculo: form.placaVeiculo,
+        itemManifestoRecebimentoJSONs: Array.isArray(m.residuos) 
+          ? m.residuos.map((residuo, index) => {
+              // Calcular a proporção deste resíduo específico
+              const qtdResiduo = parseFloat(residuo.quantidade.replace(',', '.')) || 0;
+              const proporcaoResiduo = qtdResiduo / divisor;
+              const qtdRecebidaResiduo = qtdTotalMTR * proporcaoResiduo;
+
+              return {
+                codigoSequencial: index + 1,
+                justificativa: null,
+                codigoInterno: null,
+                qtdRecebida: parseFloat(qtdRecebidaResiduo.toFixed(6)), // Arredondar para 6 casas decimais
+                residuo: residuo.codigoIbama?.replace(/\D/g, '') || '',
+                codigoAcondicionamento: 1, // Valor padrão - pode ser ajustado conforme necessário
+                codigoClasse: residuo.classe === 'IIA' ? 3 : 1,
+                codigoTecnologia: residuo.tecnologia === 'Aterro' ? 7 : 5,
+                codigoTipoEstado: residuo.estadoFisico === 'Sólido' ? 1 : 2,
+                codigoUnidade: residuo.unidade === 'Tonelada' ? 4 : 1
+              };
+            })
+          : [{
+              codigoSequencial: 1,
+              justificativa: null,
+              codigoInterno: null,
+              qtdRecebida: parseFloat((qtdTotalMTR).toFixed(6)),
+              residuo: m.residuo?.codigoIbama?.replace(/\D/g, '') || '',
+              codigoAcondicionamento: 1,
+              codigoClasse: m.residuo?.classe === 'IIA' ? 3 : 1,
+              codigoTecnologia: m.residuo?.tecnologia === 'Aterro' ? 7 : 5,
+              codigoTipoEstado: m.residuo?.estadoFisico === 'Sólido' ? 1 : 2,
+              codigoUnidade: m.residuo?.unidade === 'Tonelada' ? 4 : 1
+            }]
+      };
+    })
   };
 
   console.log('Payload para envio:', JSON.stringify(payload, null, 2));
