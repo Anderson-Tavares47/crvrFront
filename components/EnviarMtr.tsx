@@ -535,26 +535,49 @@ export default function MtrBaixaPage() {
         recebimentoMtrObs: form.recebimentoMtrObs || '',
         nomeMotorista: form.nomeMotorista,
         placaVeiculo: form.placaVeiculo,
-        itemManifestoRecebimentoJSONs: Array.isArray(m.residuos) 
-          ? m.residuos.map((residuo, index) => {
-              // Calcular a proporção deste resíduo específico
-              const qtdResiduo = parseFloat(residuo.quantidade.replace(',', '.')) || 0;
-              const proporcaoResiduo = qtdResiduo / divisor;
-              const qtdRecebidaResiduo = qtdTotalMTR * proporcaoResiduo;
+        // itemManifestoRecebimentoJSONs: Array.isArray(m.residuos) 
+        //   ? m.residuos.map((residuo, index) => {
+        //       // // Calcular a proporção deste resíduo específico
+        //       // const qtdResiduo = parseFloat(residuo.quantidade.replace(',', '.')) || 0;
+        //       // const proporcaoResiduo = qtdResiduo / divisor;
+        //       // const qtdRecebidaResiduo = qtdTotalMTR * proporcaoResiduo;
 
-              return {
-                codigoSequencial: index + 1,
-                justificativa: null,
-                codigoInterno: null,
-                qtdRecebida: parseFloat(qtdRecebidaResiduo.toFixed(6)), // Arredondar para 6 casas decimais
-                residuo: residuo.codigoIbama?.replace(/\D/g, '') || '',
-                codigoAcondicionamento: 1, // Valor padrão - pode ser ajustado conforme necessário
-                codigoClasse: residuo.classe === 'IIA' ? 3 : 1,
-                codigoTecnologia: residuo.tecnologia === 'Aterro' ? 7 : 5,
-                codigoTipoEstado: residuo.estadoFisico === 'Sólido' ? 1 : 2,
-                codigoUnidade: residuo.unidade === 'Tonelada' ? 4 : 1
-              };
-            })
+        //     // Dividir igualmente entre os resíduos
+
+
+        //       return {
+        //         codigoSequencial: index + 1,
+        //         justificativa: null,
+        //         codigoInterno: null,
+        //         qtdRecebida: parseFloat(qtdRecebidaResiduo.toFixed(6)), // Arredondar para 6 casas decimais
+        //         residuo: residuo.codigoIbama?.replace(/\D/g, '') || '',
+        //         codigoAcondicionamento: 1, // Valor padrão - pode ser ajustado conforme necessário
+        //         codigoClasse: residuo.classe === 'IIA' ? 3 : 1,
+        //         codigoTecnologia: residuo.tecnologia === 'Aterro' ? 7 : 5,
+        //         codigoTipoEstado: residuo.estadoFisico === 'Sólido' ? 1 : 2,
+        //         codigoUnidade: residuo.unidade === 'Tonelada' ? 4 : 1
+        //       };
+        //     })
+
+        itemManifestoRecebimentoJSONs: Array.isArray(m.residuos) 
+  ? m.residuos.map((residuo, index) => {
+      // Divide igualmente entre os resíduos (sem usar peso ou proporção)
+      const qtdRecebidaResiduo = qtdTotalMTR / m.residuos.length;
+
+      return {
+        codigoSequencial: index + 1,
+        justificativa: null,
+        codigoInterno: null,
+        qtdRecebida: parseFloat(qtdRecebidaResiduo.toFixed(6)),
+        residuo: residuo.codigoIbama?.replace(/\D/g, '') || '',
+        codigoAcondicionamento: 1,
+        codigoClasse: residuo.classe === 'IIA' ? 3 : 1,
+        codigoTecnologia: residuo.tecnologia === 'Aterro' ? 7 : 5,
+        codigoTipoEstado: residuo.estadoFisico === 'Sólido' ? 1 : 2,
+        codigoUnidade: residuo.unidade === 'Tonelada' ? 4 : 1
+      };
+    })
+
           : [{
               codigoSequencial: 1,
               justificativa: null,
