@@ -17,7 +17,7 @@ interface MTRResponse {
     nomeMotorista: string;
     cnpj: string;
   };
-  residuo: {
+  residuos: {
     codigoIbama: string;
     estadoFisico: string;
     classe: string;
