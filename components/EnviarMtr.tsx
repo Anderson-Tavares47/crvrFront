@@ -508,12 +508,12 @@ export default function MtrBaixaPage() {
     cnp: '03505185000346',
     manifestoRecebimentoJSONs: mtrsValidos.map((m) => {
       // Calcular a quantidade total de resíduos no MTR (soma de todas as quantidades)
-      const totalResiduosMTR = Array.isArray(m.residuos) 
-        ? m.residuos.reduce((total, residuo) => {
-            const qtd = parseFloat(residuo.quantidade.replace(',', '.'));
-            return total + (isNaN(qtd) ? 0 : qtd);
-          }, 0)
-        : 0;
+      // const totalResiduosMTR = Array.isArray(m.residuos) 
+      //   ? m.residuos.reduce((total, residuo) => {
+      //       const qtd = parseFloat(residuo.quantidade.replace(',', '.'));
+      //       return total + (isNaN(qtd) ? 0 : qtd);
+      //     }, 0)
+      //   : 0;
 
       // Se não houver resíduos ou a soma for zero, usar 1 como fallback para evitar divisão por zero
       // const divisor = totalResiduosMTR > 0 ? totalResiduosMTR : 1;
