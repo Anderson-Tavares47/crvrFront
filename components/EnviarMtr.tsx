@@ -486,7 +486,7 @@ export default function MtrBaixaPage() {
             justificativa: null,
             codigoInterno: null,
             // Usando a quantidade calculada para cada resíduo
-            qtdRecebida: parseFloat(qtdPorCadaResiduoNesteMTR.toFixed(4)), 
+            qtdRecebida: parseFloat(qtdPorCadaResiduoNesteMTR.toFixed()), 
             residuo: residuo.codigoIbama?.replace(/\D/g, '') || '',
             codigoAcondicionamento: listas.acondicionamentos.find((item) =>
               item.tipoDescricao.toLowerCase().includes(residuo.acondicionamento?.toLowerCase() || '')
