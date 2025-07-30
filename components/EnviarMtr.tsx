@@ -440,66 +440,17 @@ export default function MtrBaixaPage() {
 
  
 
-//  function gerarObjetoFinal() {
-//   if (!validateForm()) return;
-//   if (mtrsValidos.length === 0) {
-//     alert("Nenhum MTR válido para gerar o JSON");
-//     return;
-//   }
-
-//   const limparCNPJ = (cnpj: string) => cnpj.replace(/\D/g, '');
-
-//   // Converter de kg para toneladas (dividir por 1000)
-//   const qtdRecebidaEmToneladas = parseNumberWithCommas(form.qtdRecebida) / 1000;
-//   const qtdPorManifesto = parseFloat((qtdRecebidaEmToneladas / mtrsValidos.length).toFixed(6));
-
-//   const payload = {
-//     login: '02661308016',
-//     senha: 'saoleopoldo2021',
-//     cnp: '03505185000346',
-//     manifestoRecebimentoJSONs: mtrsValidos.map((m) => ({
-//       manifestoCodigo: m.numeroMTR,
-//       cnpGerador: limparCNPJ(m.gerador?.cnpj || ''),
-//       cnpTransportador: limparCNPJ(m.transportador?.cnpj || ''),
-//       recebimentoMtrResponsavel: form.recebimentoMtrResponsavel,
-//       recebimentoMtrCargo: form.recebimentoMtrCargo,
-//       recebimentoMtrData: formatDate(form.recebimentoMtrData),
-//       transporteMtrData: formatDate(form.transporteMtrData),
-//       recebimentoMtrObs: form.recebimentoMtrObs || '',
-//       nomeMotorista: form.nomeMotorista,
-//       placaVeiculo: form.placaVeiculo,
-//       itemManifestoRecebimentoJSONs: [
-//         {
-//           codigoSequencial: 1,
-//           justificativa: null,
-//           codigoInterno: null,
-//           qtdRecebida: qtdPorManifesto, // Já em toneladas
-//           residuo: m.residuo?.codigoIbama?.replace(/\D/g, '') || '',
-//           codigoAcondicionamento: 1,
-//           codigoClasse: m.residuo.classe === 'IIA' ? 3 : 1,
-//           codigoTecnologia: m.residuo.tecnologia === 'Aterro' ? 7 : 5,
-//           codigoTipoEstado: m.residuo.estadoFisico === 'Sólido' ? 1 : 2,
-//           codigoUnidade: m.residuo.unidade === 'Tonelada' ? 4 : 1
-//         }
-//       ]
-//     }))
-//   };
-
-//   console.log('Payload para envio:', JSON.stringify(payload, null, 2));
-//   return payload;
-// }
 
 
 //   function gerarObjetoFinal() {
-//   if (!validateForm()) return;
+//    if (!validateForm()) return;
 //   if (mtrsValidos.length === 0) {
 //     alert("Nenhum MTR válido para gerar o JSON");
 //     return;
 //   }
 
 //   const limparCNPJ = (cnpj: string) => cnpj.replace(/\D/g, '');
-
-//   // Converter de kg para toneladas
+//   // Converte a quantidade recebida de KG para Toneladas.
 //   const qtdRecebidaEmToneladas = parseNumberWithCommas(form.qtdRecebida) / 1000;
 
 //   const payload = {
@@ -507,58 +458,45 @@ export default function MtrBaixaPage() {
 //     senha: 'saoleopoldo2021',
 //     cnp: '03505185000346',
 //     manifestoRecebimentoJSONs: mtrsValidos.map((m) => {
-//       // Calcular a proporção que este MTR deve receber do total
-//       const proporcaoMTR = mtrsValidos.length > 0 ? 1 / mtrsValidos.length : 1;
+//       // Garante que 'm.residuos' é sempre um array para iterar.
+//       const residuosDoMTR = Array.isArray(m.residuos) ? m.residuos : [m.residuos];
 
-//       // Quantidade total para este MTR (proporção do total recebido)
-//       const qtdTotalMTR = qtdRecebidaEmToneladas * proporcaoMTR;
+//       // Divide a quantidade total de recebimento igualmente entre os MTRs válidos.
+//       const qtdTotalParaEsteMTR = qtdRecebidaEmToneladas / mtrsValidos.length;
+      
+//       // Divide a quantidade de cada MTR igualmente entre os resíduos dentro daquele MTR.
+//       const qtdPorCadaResiduoNesteMTR = residuosDoMTR.length > 0 
+//                                          ? qtdTotalParaEsteMTR / residuosDoMTR.length
+//                                          : 0; // Evita divisão por zero
 
 //       return {
 //         manifestoCodigo: m.numeroMTR,
 //         cnpGerador: limparCNPJ(m.gerador?.cnpj || ''),
 //         cnpTransportador: limparCNPJ(m.transportador?.cnpj || ''),
-//         recebimentoMtrResponsavel: "Pierre",
-//         recebimentoMtrCargo: "Balanceiro",
+//         recebimentoMtrResponsavel: form.recebimentoMtrResponsavel,
+//         recebimentoMtrCargo: form.recebimentoMtrCargo,
 //         recebimentoMtrData: formatDate(form.recebimentoMtrData),
 //         transporteMtrData: formatDate(form.transporteMtrData),
 //         recebimentoMtrObs: form.recebimentoMtrObs || '',
 //         nomeMotorista: form.nomeMotorista,
 //         placaVeiculo: form.placaVeiculo,
-//        itemManifestoRecebimentoJSONs: Array.isArray(m.residuos) 
-//   ? (() => {
-//       const qtdPorResiduo = qtdTotalMTR / m.residuos.length;
-//       return m.residuos.map((residuo, index) => ({
-//         codigoSequencial: index + 1,
-//         justificativa: null,
-//         codigoInterno: null,
-//         qtdRecebida: parseFloat(qtdPorResiduo.toFixed(6)),
-//         residuo: residuo.codigoIbama?.replace(/\D/g, '') || '',
-//         codigoAcondicionamento:
-//               listas.acondicionamentos.find((item) =>
-//                 item.tipoDescricao.toLowerCase().includes(residuo.acondicionamento.toLowerCase())
-//               )?.tipoCodigo || 1,
-//         codigoClasse: residuo.classe === 'IIA' ? 3 : 1,
-//         codigoTecnologia: residuo.tecnologia === 'Aterro' ? 7 : 5,
-//         codigoTipoEstado: residuo.estadoFisico === 'Sólido' ? 1 : 2,
-//         codigoUnidade: residuo.unidade === 'Tonelada' ? 4 : 1
-//       }));
-//     })()
-//   : [{
-//       codigoSequencial: 1,
-//       justificativa: null,
-//       codigoInterno: null,
-//       qtdRecebida: parseFloat(qtdTotalMTR.toFixed(6)),
-//       residuo: m.residuos?.codigoIbama?.replace(/\D/g, '') || '',
-//        codigoAcondicionamento:
-//               listas.acondicionamentos.find((item) =>
-//                 item.tipoDescricao.toLowerCase().includes(residuo.acondicionamento.toLowerCase())
-//               )?.tipoCodigo || 1,
-//       codigoClasse: m.residuos?.classe === 'IIA' ? 3 : 1,
-//       codigoTecnologia: m.residuos?.tecnologia === 'Aterro' ? 7 : 5,
-//       codigoTipoEstado: m.residuos?.estadoFisico === 'Sólido' ? 1 : 2,
-//       codigoUnidade: m.residuos?.unidade === 'Tonelada' ? 4 : 1
-//     }]
-
+//         itemManifestoRecebimentoJSONs: residuosDoMTR.map((residuo, index) => {
+//           return {
+//             codigoSequencial: index + 1,
+//             justificativa: null,
+//             codigoInterno: null,
+//             // Usando a quantidade calculada para cada resíduo
+//             qtdRecebida: parseFloat(qtdPorCadaResiduoNesteMTR.toFixed(4)), 
+//             residuo: residuo.codigoIbama?.replace(/\D/g, '') || '',
+//             codigoAcondicionamento: listas.acondicionamentos.find((item) =>
+//               item.tipoDescricao.toLowerCase().includes(residuo.acondicionamento?.toLowerCase() || '')
+//             )?.tipoCodigo || 1,
+//             codigoClasse: residuo.classe === 'IIA' ? 3 : 1,
+//             codigoTecnologia: residuo.tecnologia === 'Aterro' ? 7 : 5,
+//             codigoTipoEstado: residuo.estadoFisico === 'Sólido' ? 1 : 2,
+//             codigoUnidade: residuo.unidade === 'Tonelada' ? 4 : 1
+//           };
+//         })
 //       };
 //     })
 //   };
@@ -568,32 +506,40 @@ export default function MtrBaixaPage() {
 // }
 
   function gerarObjetoFinal() {
-   if (!validateForm()) return;
+  if (!validateForm()) return;
   if (mtrsValidos.length === 0) {
     alert("Nenhum MTR válido para gerar o JSON");
     return;
   }
 
   const limparCNPJ = (cnpj: string) => cnpj.replace(/\D/g, '');
-  // Converte a quantidade recebida de KG para Toneladas.
-  const qtdRecebidaEmToneladas = parseNumberWithCommas(form.qtdRecebida) / 1000;
+  
+  // Converter para toneladas e manter como número de alta precisão
+  const qtdTotalKg = parseNumberWithCommas(form.qtdRecebida);
+  const qtdTotalToneladas = qtdTotalKg / 1000;
+  
+  // Calcular o total de resíduos em todos os MTRs
+  const totalResiduos = mtrsValidos.reduce((total, m) => {
+    const residuosDoMTR = Array.isArray(m.residuos) ? m.residuos : [m.residuos];
+    return total + residuosDoMTR.length;
+  }, 0);
 
+  if (totalResiduos === 0) {
+    alert("Nenhum resíduo encontrado nos MTRs válidos");
+    return;
+  }
+
+  // Calcular a quantidade por resíduo
+  const qtdPorResiduo = qtdTotalToneladas / totalResiduos;
+  
+  let residuoIndex = 0;
   const payload = {
     login: '02661308016',
     senha: 'saoleopoldo2021',
     cnp: '03505185000346',
     manifestoRecebimentoJSONs: mtrsValidos.map((m) => {
-      // Garante que 'm.residuos' é sempre um array para iterar.
       const residuosDoMTR = Array.isArray(m.residuos) ? m.residuos : [m.residuos];
-
-      // Divide a quantidade total de recebimento igualmente entre os MTRs válidos.
-      const qtdTotalParaEsteMTR = qtdRecebidaEmToneladas / mtrsValidos.length;
       
-      // Divide a quantidade de cada MTR igualmente entre os resíduos dentro daquele MTR.
-      const qtdPorCadaResiduoNesteMTR = residuosDoMTR.length > 0 
-                                         ? qtdTotalParaEsteMTR / residuosDoMTR.length
-                                         : 0; // Evita divisão por zero
-
       return {
         manifestoCodigo: m.numeroMTR,
         cnpGerador: limparCNPJ(m.gerador?.cnpj || ''),
@@ -606,12 +552,19 @@ export default function MtrBaixaPage() {
         nomeMotorista: form.nomeMotorista,
         placaVeiculo: form.placaVeiculo,
         itemManifestoRecebimentoJSONs: residuosDoMTR.map((residuo, index) => {
+          // Para o último resíduo do último MTR, usar o restante para evitar perda de precisão
+          const isLast = (residuoIndex === totalResiduos - 1);
+          const qtd = isLast 
+            ? qtdTotalToneladas - (qtdPorResiduo * (totalResiduos - 1))
+            : qtdPorResiduo;
+          
+          residuoIndex++;
+          
           return {
             codigoSequencial: index + 1,
             justificativa: null,
             codigoInterno: null,
-            // Usando a quantidade calculada para cada resíduo
-            qtdRecebida: parseFloat(qtdPorCadaResiduoNesteMTR.toFixed(4)), 
+            qtdRecebida: qtd, // Usar o valor exato sem arredondamento
             residuo: residuo.codigoIbama?.replace(/\D/g, '') || '',
             codigoAcondicionamento: listas.acondicionamentos.find((item) =>
               item.tipoDescricao.toLowerCase().includes(residuo.acondicionamento?.toLowerCase() || '')
