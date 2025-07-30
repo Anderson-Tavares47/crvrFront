@@ -789,6 +789,61 @@ export default function MtrBaixaPage() {
                 "md:col-span-1"
               )}
 
+              {/* Campo de visualização da distribuição */}
+              {form.qtdRecebida && mtrsValidos.length > 0 && (
+                <div className="md:col-span-2 mt-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Distribuição da Quantidade por MTR
+                  </label>
+                  <div className="bg-blue-50 border border-blue-200 rounded-md p-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {mtrsValidos.map((mtr, index) => {
+                        const qtdTotalEmToneladas = parseNumberWithCommas(form.qtdRecebida) / 1000;
+                        const qtdPorMTR = qtdTotalEmToneladas / mtrsValidos.length;
+                        const residuos = Array.isArray(mtr.residuos) ? mtr.residuos : [mtr.residuos];
+                        const qtdPorResiduo = qtdPorMTR / residuos.length;
+                        
+                        return (
+                          <div key={index} className="bg-white p-3 rounded-md border border-blue-300">
+                            <div className="flex flex-col">
+                              <span className="text-xs font-medium text-blue-700 mb-1">
+                                MTR: {mtr.numeroMTR}
+                              </span>
+                              <span className="text-sm font-semibold text-gray-800">
+                                Total: {qtdPorMTR.toFixed(4)} t
+                              </span>
+                              {residuos.length > 1 && (
+                                <div className="mt-2 space-y-1">
+                                  <span className="text-xs text-gray-600">Por resíduo:</span>
+                                  {residuos.map((residuo, resIndex) => (
+                                    <div key={resIndex} className="text-xs text-gray-700">
+                                      <span className="font-mono bg-gray-100 px-1 rounded">
+                                        {residuo.codigoIbama}
+                                      </span>
+                                      : {qtdPorResiduo.toFixed(4)} t
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <div className="mt-3 pt-3 border-t border-blue-200">
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-gray-600">
+                          Total de MTRs: {mtrsValidos.length}
+                        </span>
+                        <span className="font-semibold text-blue-700">
+                          Total geral: {(parseNumberWithCommas(form.qtdRecebida) / 1000).toFixed(4)} toneladas
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Observações</label>
                 <textarea
