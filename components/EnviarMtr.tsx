@@ -533,9 +533,10 @@ export default function MtrBaixaPage() {
         codigoInterno: null,
         qtdRecebida: parseFloat(qtdPorResiduo.toFixed(6)),
         residuo: residuo.codigoIbama?.replace(/\D/g, '') || '',
-       codigoAcondicionamento: listas.acondicionamentos.find((item) =>
-    item.tipoDescricao.toLowerCase().includes(residuo.acondicionamento.toLowerCase())
-  )?.tipoCodigo || 1,
+        codigoAcondicionamento:
+              listas.acondicionamentos.find((item) =>
+                item.tipoDescricao.toLowerCase().includes(residuo.acondicionamento.toLowerCase())
+              )?.tipoCodigo || 1,
         codigoClasse: residuo.classe === 'IIA' ? 3 : 1,
         codigoTecnologia: residuo.tecnologia === 'Aterro' ? 7 : 5,
         codigoTipoEstado: residuo.estadoFisico === 'Sólido' ? 1 : 2,
@@ -548,9 +549,10 @@ export default function MtrBaixaPage() {
       codigoInterno: null,
       qtdRecebida: parseFloat(qtdTotalMTR.toFixed(6)),
       residuo: m.residuos?.codigoIbama?.replace(/\D/g, '') || '',
-      codigoAcondicionamento: listas.acondicionamentos.find((item) =>
-    item.tipoDescricao.toLowerCase().includes(residuo.acondicionamento.toLowerCase())
-  )?.tipoCodigo || 1,
+       codigoAcondicionamento:
+              listas.acondicionamentos.find((item) =>
+                item.tipoDescricao.toLowerCase().includes(residuo.acondicionamento.toLowerCase())
+              )?.tipoCodigo || 1,
       codigoClasse: m.residuos?.classe === 'IIA' ? 3 : 1,
       codigoTecnologia: m.residuos?.tecnologia === 'Aterro' ? 7 : 5,
       codigoTipoEstado: m.residuos?.estadoFisico === 'Sólido' ? 1 : 2,
