@@ -806,6 +806,34 @@ export default function MtrBaixaPage() {
               </div>
             </div>
           </div>
+          {residuos.map((residuo, index) => {
+  const qtdPorResiduo = (quantidadeTotal / mtrs.length) / residuos.length;
+
+  return (
+    <div key={index} className="flex items-center gap-4 mb-2">
+      <div className="w-1/3">
+        <label className="block text-sm font-medium">Resíduo {index + 1}</label>
+        <input
+          type="text"
+          value={residuo.nome || ''}
+          readOnly
+          className="w-full border rounded px-2 py-1 bg-gray-100"
+        />
+      </div>
+
+      <div className="w-1/3">
+        <label className="block text-sm font-medium">Quantidade atribuída</label>
+        <input
+          type="text"
+          value={qtdPorResiduo.toFixed(4).replace('.', ',')}
+          readOnly
+          className="w-full border rounded px-2 py-1 bg-gray-100 text-right"
+        />
+      </div>
+    </div>
+  );
+})}
+
 
           <div className="flex justify-end space-x-4">
             <button
