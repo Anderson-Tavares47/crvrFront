@@ -568,13 +568,14 @@ export default function MtrBaixaPage() {
 // }
 
   function gerarObjetoFinal() {
-  if (!validateForm()) return;
+   if (!validateForm()) return;
   if (mtrsValidos.length === 0) {
     alert("Nenhum MTR válido para gerar o JSON");
     return;
   }
 
   const limparCNPJ = (cnpj: string) => cnpj.replace(/\D/g, '');
+  // Converte a quantidade recebida de KG para Toneladas.
   const qtdRecebidaEmToneladas = parseNumberWithCommas(form.qtdRecebida) / 1000;
 
   const payload = {
@@ -582,10 +583,16 @@ export default function MtrBaixaPage() {
     senha: 'saoleopoldo2021',
     cnp: '03505185000346',
     manifestoRecebimentoJSONs: mtrsValidos.map((m) => {
-      const residuos = Array.isArray(m.residuos) ? m.residuos : [m.residuos];
+      // Garante que 'm.residuos' é sempre um array para iterar.
+      const residuosDoMTR = Array.isArray(m.residuos) ? m.residuos : [m.residuos];
 
-      const qtdTotalMTR = qtdRecebidaEmToneladas / mtrsValidos.length;
-      const qtdPorResiduo = qtdTotalMTR / residuos.length;
+      // Divide a quantidade total de recebimento igualmente entre os MTRs válidos.
+      const qtdTotalParaEsteMTR = qtdRecebidaEmToneladas / mtrsValidos.length;
+      
+      // Divide a quantidade de cada MTR igualmente entre os resíduos dentro daquele MTR.
+      const qtdPorCadaResiduoNesteMTR = residuosDoMTR.length > 0 
+                                         ? qtdTotalParaEsteMTR / residuosDoMTR.length
+                                         : 0; // Evita divisão por zero
 
       return {
         manifestoCodigo: m.numeroMTR,
@@ -598,14 +605,13 @@ export default function MtrBaixaPage() {
         recebimentoMtrObs: form.recebimentoMtrObs || '',
         nomeMotorista: form.nomeMotorista,
         placaVeiculo: form.placaVeiculo,
-        itemManifestoRecebimentoJSONs: residuos.map((residuo, index) => {
-          {residuos.map((residuo, index) => {
-  const qtdPorResiduo = (quantidadeTotal / mtrs.length) / residuos.length;
+        itemManifestoRecebimentoJSONs: residuosDoMTR.map((residuo, index) => {
           return {
             codigoSequencial: index + 1,
             justificativa: null,
             codigoInterno: null,
-            qtdRecebida: parseFloat(qtdPorResiduo.toFixed(4)),
+            // Usando a quantidade calculada para cada resíduo
+            qtdRecebida: parseFloat(qtdPorCadaResiduoNesteMTR.toFixed(4)), 
             residuo: residuo.codigoIbama?.replace(/\D/g, '') || '',
             codigoAcondicionamento: listas.acondicionamentos.find((item) =>
               item.tipoDescricao.toLowerCase().includes(residuo.acondicionamento?.toLowerCase() || '')
@@ -623,7 +629,6 @@ export default function MtrBaixaPage() {
   console.log('Payload para envio:', JSON.stringify(payload, null, 2));
   return payload;
 }
-
 
 
   const renderInputField = (
