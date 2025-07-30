@@ -562,10 +562,10 @@ export default function MtrBaixaPage() {
               qtdRecebida: parseFloat((qtdTotalMTR).toFixed(6)),
               residuo: m.residuos?.codigoIbama?.replace(/\D/g, '') || '',
               codigoAcondicionamento: 1,
-              codigoClasse: m.residuo?.classe === 'IIA' ? 3 : 1,
-              codigoTecnologia: m.residuo?.tecnologia === 'Aterro' ? 7 : 5,
-              codigoTipoEstado: m.residuo?.estadoFisico === 'Sólido' ? 1 : 2,
-              codigoUnidade: m.residuo?.unidade === 'Tonelada' ? 4 : 1
+              codigoClasse: m.residuos?.classe === 'IIA' ? 3 : 1,
+              codigoTecnologia: m.residuos?.tecnologia === 'Aterro' ? 7 : 5,
+              codigoTipoEstado: m.residuos?.estadoFisico === 'Sólido' ? 1 : 2,
+              codigoUnidade: m.residuos?.unidade === 'Tonelada' ? 4 : 1
             }]
       };
     })
