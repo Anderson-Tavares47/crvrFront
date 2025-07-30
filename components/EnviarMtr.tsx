@@ -516,7 +516,7 @@ export default function MtrBaixaPage() {
         : 0;
 
       // Se não houver resíduos ou a soma for zero, usar 1 como fallback para evitar divisão por zero
-      const divisor = totalResiduosMTR > 0 ? totalResiduosMTR : 1;
+      // const divisor = totalResiduosMTR > 0 ? totalResiduosMTR : 1;
 
       // Calcular a proporção que este MTR deve receber do total
       const proporcaoMTR = mtrsValidos.length > 0 ? 1 / mtrsValidos.length : 1;
