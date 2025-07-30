@@ -599,6 +599,38 @@ export default function MtrBaixaPage() {
         nomeMotorista: form.nomeMotorista,
         placaVeiculo: form.placaVeiculo,
         itemManifestoRecebimentoJSONs: residuos.map((residuo, index) => {
+          {residuos.map((residuo, index) => {
+  const qtdPorResiduo = (quantidadeTotal / mtrs.length) / residuos.length;
+
+  return (
+    <div key={index} className="flex items-center gap-4 border p-2 mb-2 rounded bg-gray-50">
+      <div className="w-1/3">
+        <label className="block text-sm font-semibold text-gray-700">
+          Resíduo {index + 1}
+        </label>
+        <input
+          type="text"
+          value={residuo.codigoIbama || ''}
+          readOnly
+          className="w-full px-2 py-1 border rounded bg-gray-100"
+        />
+      </div>
+
+      <div className="w-1/3">
+        <label className="block text-sm font-semibold text-gray-700">
+          Quantidade atribuída
+        </label>
+        <input
+          type="text"
+          value={qtdPorResiduo.toFixed(4).replace('.', ',')}
+          readOnly
+          className="w-full px-2 py-1 border rounded bg-gray-100 text-right"
+        />
+      </div>
+    </div>
+  );
+})}
+
           return {
             codigoSequencial: index + 1,
             justificativa: null,
@@ -806,35 +838,6 @@ export default function MtrBaixaPage() {
               </div>
             </div>
           </div>
-          {residuos.map((residuo, index) => {
-  const qtdPorResiduo = (quantidadeTotal / mtrs.length) / residuos.length;
-
-  return (
-    <div key={index} className="flex items-center gap-4 mb-2">
-      <div className="w-1/3">
-        <label className="block text-sm font-medium">Resíduo {index + 1}</label>
-        <input
-          type="text"
-          value={residuo.nome || ''}
-          readOnly
-          className="w-full border rounded px-2 py-1 bg-gray-100"
-        />
-      </div>
-
-      <div className="w-1/3">
-        <label className="block text-sm font-medium">Quantidade atribuída</label>
-        <input
-          type="text"
-          value={qtdPorResiduo.toFixed(4).replace('.', ',')}
-          readOnly
-          className="w-full border rounded px-2 py-1 bg-gray-100 text-right"
-        />
-      </div>
-    </div>
-  );
-})}
-
-
           <div className="flex justify-end space-x-4">
             <button
               className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition-colors 
