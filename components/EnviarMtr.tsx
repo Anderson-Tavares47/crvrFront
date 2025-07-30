@@ -42,7 +42,7 @@ interface RetornoErro {
 }
 
 export default function MtrBaixaPage() {
-  const [, setListas] = useState({
+  const [listas, setListas] = useState({
     acondicionamentos: [] as ListaItem[],
     classes: [] as ListaItem[],
     estadosFisicos: [] as ListaItem[],
