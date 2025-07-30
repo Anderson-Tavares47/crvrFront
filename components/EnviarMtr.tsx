@@ -560,7 +560,7 @@ export default function MtrBaixaPage() {
               justificativa: null,
               codigoInterno: null,
               qtdRecebida: parseFloat((qtdTotalMTR).toFixed(6)),
-              residuo: m.residuo?.codigoIbama?.replace(/\D/g, '') || '',
+              residuo: m.residuos?.codigoIbama?.replace(/\D/g, '') || '',
               codigoAcondicionamento: 1,
               codigoClasse: m.residuo?.classe === 'IIA' ? 3 : 1,
               codigoTecnologia: m.residuo?.tecnologia === 'Aterro' ? 7 : 5,
