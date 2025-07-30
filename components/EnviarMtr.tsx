@@ -499,28 +499,17 @@ export default function MtrBaixaPage() {
 
   const limparCNPJ = (cnpj: string) => cnpj.replace(/\D/g, '');
 
-  // Converter de kg para toneladas (dividir por 1000)
+  // Converter de kg para toneladas
   const qtdRecebidaEmToneladas = parseNumberWithCommas(form.qtdRecebida) / 1000;
-  
+
   const payload = {
     login: '02661308016',
     senha: 'saoleopoldo2021',
     cnp: '03505185000346',
     manifestoRecebimentoJSONs: mtrsValidos.map((m) => {
-      // Calcular a quantidade total de resíduos no MTR (soma de todas as quantidades)
-      // const totalResiduosMTR = Array.isArray(m.residuos) 
-      //   ? m.residuos.reduce((total, residuo) => {
-      //       const qtd = parseFloat(residuo.quantidade.replace(',', '.'));
-      //       return total + (isNaN(qtd) ? 0 : qtd);
-      //     }, 0)
-      //   : 0;
-
-      // Se não houver resíduos ou a soma for zero, usar 1 como fallback para evitar divisão por zero
-      // const divisor = totalResiduosMTR > 0 ? totalResiduosMTR : 1;
-
       // Calcular a proporção que este MTR deve receber do total
       const proporcaoMTR = mtrsValidos.length > 0 ? 1 / mtrsValidos.length : 1;
-      
+
       // Quantidade total para este MTR (proporção do total recebido)
       const qtdTotalMTR = qtdRecebidaEmToneladas * proporcaoMTR;
 
@@ -528,61 +517,36 @@ export default function MtrBaixaPage() {
         manifestoCodigo: m.numeroMTR,
         cnpGerador: limparCNPJ(m.gerador?.cnpj || ''),
         cnpTransportador: limparCNPJ(m.transportador?.cnpj || ''),
-        recebimentoMtrResponsavel: form.recebimentoMtrResponsavel,
-        recebimentoMtrCargo: form.recebimentoMtrCargo,
+        recebimentoMtrResponsavel: "Pierre",
+        recebimentoMtrCargo: "Balanceiro",
         recebimentoMtrData: formatDate(form.recebimentoMtrData),
         transporteMtrData: formatDate(form.transporteMtrData),
         recebimentoMtrObs: form.recebimentoMtrObs || '',
         nomeMotorista: form.nomeMotorista,
         placaVeiculo: form.placaVeiculo,
-        // itemManifestoRecebimentoJSONs: Array.isArray(m.residuos) 
-        //   ? m.residuos.map((residuo, index) => {
-        //       // // Calcular a proporção deste resíduo específico
-        //       // const qtdResiduo = parseFloat(residuo.quantidade.replace(',', '.')) || 0;
-        //       // const proporcaoResiduo = qtdResiduo / divisor;
-        //       // const qtdRecebidaResiduo = qtdTotalMTR * proporcaoResiduo;
-
-        //     // Dividir igualmente entre os resíduos
-
-
-        //       return {
-        //         codigoSequencial: index + 1,
-        //         justificativa: null,
-        //         codigoInterno: null,
-        //         qtdRecebida: parseFloat(qtdRecebidaResiduo.toFixed(6)), // Arredondar para 6 casas decimais
-        //         residuo: residuo.codigoIbama?.replace(/\D/g, '') || '',
-        //         codigoAcondicionamento: 1, // Valor padrão - pode ser ajustado conforme necessário
-        //         codigoClasse: residuo.classe === 'IIA' ? 3 : 1,
-        //         codigoTecnologia: residuo.tecnologia === 'Aterro' ? 7 : 5,
-        //         codigoTipoEstado: residuo.estadoFisico === 'Sólido' ? 1 : 2,
-        //         codigoUnidade: residuo.unidade === 'Tonelada' ? 4 : 1
-        //       };
-        //     })
-
         itemManifestoRecebimentoJSONs: Array.isArray(m.residuos) 
-  ? m.residuos.map((residuo, index) => {
-      // Divide igualmente entre os resíduos (sem usar peso ou proporção)
-      const qtdRecebidaResiduo = qtdTotalMTR / m.residuos.length;
+          ? m.residuos.map((residuo, index) => {
+              // Divide igualmente entre os resíduos (independente do peso original)
+              const qtdRecebidaResiduo = qtdTotalMTR / m.residuos.length;
 
-      return {
-        codigoSequencial: index + 1,
-        justificativa: null,
-        codigoInterno: null,
-        qtdRecebida: parseFloat(qtdRecebidaResiduo.toFixed(6)),
-        residuo: residuo.codigoIbama?.replace(/\D/g, '') || '',
-        codigoAcondicionamento: 1,
-        codigoClasse: residuo.classe === 'IIA' ? 3 : 1,
-        codigoTecnologia: residuo.tecnologia === 'Aterro' ? 7 : 5,
-        codigoTipoEstado: residuo.estadoFisico === 'Sólido' ? 1 : 2,
-        codigoUnidade: residuo.unidade === 'Tonelada' ? 4 : 1
-      };
-    })
-
+              return {
+                codigoSequencial: index + 1,
+                justificativa: null,
+                codigoInterno: null,
+                qtdRecebida: parseFloat(qtdRecebidaResiduo.toFixed(6)),
+                residuo: residuo.codigoIbama?.replace(/\D/g, '') || '',
+                codigoAcondicionamento: 1, // Pode ajustar se quiser dinamicamente
+                codigoClasse: residuo.classe === 'IIA' ? 3 : 1,
+                codigoTecnologia: residuo.tecnologia === 'Aterro' ? 7 : 5,
+                codigoTipoEstado: residuo.estadoFisico === 'Sólido' ? 1 : 2,
+                codigoUnidade: residuo.unidade === 'Tonelada' ? 4 : 1
+              };
+            })
           : [{
               codigoSequencial: 1,
               justificativa: null,
               codigoInterno: null,
-              qtdRecebida: parseFloat((qtdTotalMTR).toFixed(6)),
+              qtdRecebida: parseFloat(qtdTotalMTR.toFixed(6)),
               residuo: m.residuos?.codigoIbama?.replace(/\D/g, '') || '',
               codigoAcondicionamento: 1,
               codigoClasse: m.residuos?.classe === 'IIA' ? 3 : 1,
@@ -597,6 +561,7 @@ export default function MtrBaixaPage() {
   console.log('Payload para envio:', JSON.stringify(payload, null, 2));
   return payload;
 }
+
 
   const renderInputField = (
     label: string,
