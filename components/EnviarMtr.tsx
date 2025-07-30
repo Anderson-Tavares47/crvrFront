@@ -598,24 +598,20 @@ export default function MtrBaixaPage() {
         recebimentoMtrObs: form.recebimentoMtrObs || '',
         nomeMotorista: form.nomeMotorista,
         placaVeiculo: form.placaVeiculo,
-        itemManifestoRecebimentoJSONs: residuos.map((residuo, index) => {
-          {residuos.map((residuo, index) => {
-  const qtdPorResiduo = (quantidadeTotal / mtrs.length) / residuos.length;
-          return {
-            codigoSequencial: index + 1,
-            justificativa: null,
-            codigoInterno: null,
-            qtdRecebida: parseFloat(qtdPorResiduo.toFixed(4)),
-            residuo: residuo.codigoIbama?.replace(/\D/g, '') || '',
-            codigoAcondicionamento: listas.acondicionamentos.find((item) =>
-              item.tipoDescricao.toLowerCase().includes(residuo.acondicionamento?.toLowerCase() || '')
-            )?.tipoCodigo || 1,
-            codigoClasse: residuo.classe === 'IIA' ? 3 : 1,
-            codigoTecnologia: residuo.tecnologia === 'Aterro' ? 7 : 5,
-            codigoTipoEstado: residuo.estadoFisico === 'Sólido' ? 1 : 2,
-            codigoUnidade: residuo.unidade === 'Tonelada' ? 4 : 1
-          };
-        })
+        itemManifestoRecebimentoJSONs: residuos.map((residuo, index) => ({
+          codigoSequencial: index + 1,
+          justificativa: null,
+          codigoInterno: null,
+          qtdRecebida: parseFloat(qtdPorResiduo.toFixed(4)),
+          residuo: residuo.codigoIbama?.replace(/\D/g, '') || '',
+          codigoAcondicionamento: listas.acondicionamentos.find((item) =>
+            item.tipoDescricao.toLowerCase().includes(residuo.acondicionamento?.toLowerCase() || '')
+          )?.tipoCodigo || 1,
+          codigoClasse: residuo.classe === 'IIA' ? 3 : 1,
+          codigoTecnologia: residuo.tecnologia === 'Aterro' ? 7 : 5,
+          codigoTipoEstado: residuo.estadoFisico === 'Sólido' ? 1 : 2,
+          codigoUnidade: residuo.unidade === 'Tonelada' ? 4 : 1
+        }))
       };
     })
   };
