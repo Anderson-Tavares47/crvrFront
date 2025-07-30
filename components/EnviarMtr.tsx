@@ -524,36 +524,35 @@ export default function MtrBaixaPage() {
         recebimentoMtrObs: form.recebimentoMtrObs || '',
         nomeMotorista: form.nomeMotorista,
         placaVeiculo: form.placaVeiculo,
-        itemManifestoRecebimentoJSONs: Array.isArray(m.residuos) 
-          ? m.residuos.map((residuo, index) => {
-              // Divide igualmente entre os resíduos (independente do peso original)
-              const qtdRecebidaResiduo = qtdTotalMTR / m.residuos.length;
+       itemManifestoRecebimentoJSONs: Array.isArray(m.residuos) 
+  ? (() => {
+      const qtdPorResiduo = qtdTotalMTR / m.residuos.length;
+      return m.residuos.map((residuo, index) => ({
+        codigoSequencial: index + 1,
+        justificativa: null,
+        codigoInterno: null,
+        qtdRecebida: parseFloat(qtdPorResiduo.toFixed(6)),
+        residuo: residuo.codigoIbama?.replace(/\D/g, '') || '',
+        codigoAcondicionamento: 1,
+        codigoClasse: residuo.classe === 'IIA' ? 3 : 1,
+        codigoTecnologia: residuo.tecnologia === 'Aterro' ? 7 : 5,
+        codigoTipoEstado: residuo.estadoFisico === 'Sólido' ? 1 : 2,
+        codigoUnidade: residuo.unidade === 'Tonelada' ? 4 : 1
+      }));
+    })()
+  : [{
+      codigoSequencial: 1,
+      justificativa: null,
+      codigoInterno: null,
+      qtdRecebida: parseFloat(qtdTotalMTR.toFixed(6)),
+      residuo: m.residuos?.codigoIbama?.replace(/\D/g, '') || '',
+      codigoAcondicionamento: 1,
+      codigoClasse: m.residuos?.classe === 'IIA' ? 3 : 1,
+      codigoTecnologia: m.residuos?.tecnologia === 'Aterro' ? 7 : 5,
+      codigoTipoEstado: m.residuos?.estadoFisico === 'Sólido' ? 1 : 2,
+      codigoUnidade: m.residuos?.unidade === 'Tonelada' ? 4 : 1
+    }]
 
-              return {
-                codigoSequencial: index + 1,
-                justificativa: null,
-                codigoInterno: null,
-                qtdRecebida: parseFloat(qtdRecebidaResiduo.toFixed(6)),
-                residuo: residuo.codigoIbama?.replace(/\D/g, '') || '',
-                codigoAcondicionamento: 1, // Pode ajustar se quiser dinamicamente
-                codigoClasse: residuo.classe === 'IIA' ? 3 : 1,
-                codigoTecnologia: residuo.tecnologia === 'Aterro' ? 7 : 5,
-                codigoTipoEstado: residuo.estadoFisico === 'Sólido' ? 1 : 2,
-                codigoUnidade: residuo.unidade === 'Tonelada' ? 4 : 1
-              };
-            })
-          : [{
-              codigoSequencial: 1,
-              justificativa: null,
-              codigoInterno: null,
-              qtdRecebida: parseFloat(qtdTotalMTR.toFixed(6)),
-              residuo: m.residuos?.codigoIbama?.replace(/\D/g, '') || '',
-              codigoAcondicionamento: 1,
-              codigoClasse: m.residuos?.classe === 'IIA' ? 3 : 1,
-              codigoTecnologia: m.residuos?.tecnologia === 'Aterro' ? 7 : 5,
-              codigoTipoEstado: m.residuos?.estadoFisico === 'Sólido' ? 1 : 2,
-              codigoUnidade: m.residuos?.unidade === 'Tonelada' ? 4 : 1
-            }]
       };
     })
   };
