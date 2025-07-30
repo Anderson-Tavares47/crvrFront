@@ -798,6 +798,31 @@ export default function MtrBaixaPage() {
                 "md:col-span-1"
               )}
 
+              {(form.qtdRecebida && mtrsValidos.length > 0) && (
+  <div className="md:col-span-1"> {/* Pode ser col-span-1 ou 2, dependendo do layout desejado */}
+    <label className="block text-sm font-medium text-gray-700 mb-1">
+      Distribuição Estimada por MTR
+    </label>
+    <div className="bg-blue-50 border border-blue-200 rounded-md p-2">
+      <p className="text-sm font-semibold text-blue-800">
+        Quantidade por MTR:{" "}
+        {(() => {
+          const qtdRecebidaEmToneladas = parseNumberWithCommas(form.qtdRecebida) / 1000;
+          const qtdPorMTR = mtrsValidos.length > 0 
+                            ? qtdRecebidaEmToneladas / mtrsValidos.length 
+                            : 0;
+          return `${qtdPorMTR.toFixed(4)} toneladas`;
+        })()}
+      </p>
+      {mtrsValidos.length > 0 && (
+        <p className="text-xs text-gray-600 mt-1">
+          Baseado em {mtrsValidos.length} MTR(s) válidos.
+        </p>
+      )}
+    </div>
+  </div>
+)}
+
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Observações</label>
                 <textarea
