@@ -486,7 +486,7 @@ export default function MtrBaixaPage() {
             justificativa: null,
             codigoInterno: null,
             // Usando a quantidade calculada para cada resíduo
-            qtdRecebida: parseFloat(qtdPorCadaResiduoNesteMTR.toFixed()), 
+            qtdRecebida: qtdPorCadaResiduoNesteMTR, 
             residuo: residuo.codigoIbama?.replace(/\D/g, '') || '',
             codigoAcondicionamento: listas.acondicionamentos.find((item) =>
               item.tipoDescricao.toLowerCase().includes(residuo.acondicionamento?.toLowerCase() || '')
@@ -688,7 +688,7 @@ export default function MtrBaixaPage() {
           const qtdPorMTR = mtrsValidos.length > 0 
                             ? qtdRecebidaEmToneladas / mtrsValidos.length 
                             : 0;
-          return `${qtdPorMTR.toFixed(4)} toneladas`;
+          return `${qtdPorMTR.toFixed(6)} toneladas`;
         })()}
       </p>
       {mtrsValidos.length > 0 && (
