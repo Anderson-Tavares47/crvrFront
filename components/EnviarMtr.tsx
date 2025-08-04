@@ -442,32 +442,102 @@ export default function MtrBaixaPage() {
 
 
 
+//   function gerarObjetoFinal() {
+//    if (!validateForm()) return;
+//   if (mtrsValidos.length === 0) {
+//     alert("Nenhum MTR válido para gerar o JSON");
+//     return;
+//   }
+
+//   const limparCNPJ = (cnpj: string) => cnpj.replace(/\D/g, '');
+//   // Converte a quantidade recebida de KG para Toneladas.
+//   const qtdRecebidaEmToneladas = parseNumberWithCommas(form.qtdRecebida) / 1000;
+
+//   const payload = {
+//     login: '02661308016',
+//     senha: 'saoleopoldo2021',
+//     cnp: '03505185000346',
+//     manifestoRecebimentoJSONs: mtrsValidos.map((m) => {
+//       // Garante que 'm.residuos' é sempre um array para iterar.
+//       const residuosDoMTR = Array.isArray(m.residuos) ? m.residuos : [m.residuos];
+
+//       // Divide a quantidade total de recebimento igualmente entre os MTRs válidos.
+//       const qtdTotalParaEsteMTR = qtdRecebidaEmToneladas / mtrsValidos.length;
+      
+//       // Divide a quantidade de cada MTR igualmente entre os resíduos dentro daquele MTR.
+//       const qtdPorCadaResiduoNesteMTR = residuosDoMTR.length > 0 
+//                                          ? qtdTotalParaEsteMTR / residuosDoMTR.length
+//                                          : 0; // Evita divisão por zero
+
+//       return {
+//         manifestoCodigo: m.numeroMTR,
+//         cnpGerador: limparCNPJ(m.gerador?.cnpj || ''),
+//         cnpTransportador: limparCNPJ(m.transportador?.cnpj || ''),
+//         recebimentoMtrResponsavel: form.recebimentoMtrResponsavel,
+//         recebimentoMtrCargo: form.recebimentoMtrCargo,
+//         recebimentoMtrData: formatDate(form.recebimentoMtrData),
+//         transporteMtrData: formatDate(form.transporteMtrData),
+//         recebimentoMtrObs: form.recebimentoMtrObs || '',
+//         nomeMotorista: form.nomeMotorista,
+//         placaVeiculo: form.placaVeiculo,
+//         itemManifestoRecebimentoJSONs: residuosDoMTR.map((residuo, index) => {
+//           return {
+//             codigoSequencial: index + 1,
+//             justificativa: null,
+//             codigoInterno: null,
+//             // Usando a quantidade calculada para cada resíduo
+//             qtdRecebida: qtdPorCadaResiduoNesteMTR, 
+//             residuo: residuo.codigoIbama?.replace(/\D/g, '') || '',
+//             codigoAcondicionamento: listas.acondicionamentos.find((item) =>
+//               item.tipoDescricao.toLowerCase().includes(residuo.acondicionamento?.toLowerCase() || '')
+//             )?.tipoCodigo || 1,
+//             codigoClasse: residuo.classe === 'IIA' ? 3 : 1,
+//             codigoTecnologia: residuo.tecnologia === 'Aterro' ? 7 : 5,
+//             codigoTipoEstado: residuo.estadoFisico === 'Sólido' ? 1 : 2,
+//             codigoUnidade: residuo.unidade === 'Tonelada' ? 4 : 1
+//           };
+//         })
+//       };
+//     })
+//   };
+
+//   console.log('Payload para envio:', JSON.stringify(payload, null, 2));
+//   return payload;
+// }
+
+
   function gerarObjetoFinal() {
-   if (!validateForm()) return;
+  if (!validateForm()) return;
   if (mtrsValidos.length === 0) {
     alert("Nenhum MTR válido para gerar o JSON");
     return;
   }
 
+  // Função para truncar números sem arredondamento
+  const truncarNumero = (num: number, casasDecimais: number): number => {
+    const fator = Math.pow(10, casasDecimais);
+    return Math.floor(num * fator) / fator; // Usamos floor para evitar arredondamento para cima
+  };
+
   const limparCNPJ = (cnpj: string) => cnpj.replace(/\D/g, '');
-  // Converte a quantidade recebida de KG para Toneladas.
-  const qtdRecebidaEmToneladas = parseNumberWithCommas(form.qtdRecebida) / 1000;
+  
+  // Converte a quantidade recebida de KG para Toneladas e já trunca
+  const qtdRecebidaEmToneladas = truncarNumero(parseNumberWithCommas(form.qtdRecebida) / 1000, 6);
 
   const payload = {
     login: '02661308016',
     senha: 'saoleopoldo2021',
     cnp: '03505185000346',
     manifestoRecebimentoJSONs: mtrsValidos.map((m) => {
-      // Garante que 'm.residuos' é sempre um array para iterar.
       const residuosDoMTR = Array.isArray(m.residuos) ? m.residuos : [m.residuos];
 
-      // Divide a quantidade total de recebimento igualmente entre os MTRs válidos.
-      const qtdTotalParaEsteMTR = qtdRecebidaEmToneladas / mtrsValidos.length;
+      // Divide a quantidade total e trunca
+      const qtdTotalParaEsteMTR = truncarNumero(qtdRecebidaEmToneladas / mtrsValidos.length, 6);
       
-      // Divide a quantidade de cada MTR igualmente entre os resíduos dentro daquele MTR.
+      // Divide por residuo e trunca novamente
       const qtdPorCadaResiduoNesteMTR = residuosDoMTR.length > 0 
-                                         ? qtdTotalParaEsteMTR / residuosDoMTR.length
-                                         : 0; // Evita divisão por zero
+                                       ? truncarNumero(qtdTotalParaEsteMTR / residuosDoMTR.length, 6)
+                                       : 0;
 
       return {
         manifestoCodigo: m.numeroMTR,
@@ -485,8 +555,8 @@ export default function MtrBaixaPage() {
             codigoSequencial: index + 1,
             justificativa: null,
             codigoInterno: null,
-            // Usando a quantidade calculada para cada resíduo
-            qtdRecebida: qtdPorCadaResiduoNesteMTR, 
+            // Valor já truncado com 6 casas decimais
+            qtdRecebida: qtdPorCadaResiduoNesteMTR,
             residuo: residuo.codigoIbama?.replace(/\D/g, '') || '',
             codigoAcondicionamento: listas.acondicionamentos.find((item) =>
               item.tipoDescricao.toLowerCase().includes(residuo.acondicionamento?.toLowerCase() || '')
@@ -759,3 +829,4 @@ export default function MtrBaixaPage() {
     </div>
   );
 }
+
