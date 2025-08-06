@@ -248,10 +248,10 @@ export default function MtrForm() {
     });
 
     doc.setPage(currentPage);
-    let footerY = pageHeight - margin - 15;
+    let footerY = pageHeight - margin - 10;
     if (yPosition > footerY - 20) {
       doc.addPage();
-      footerY = pageHeight - margin - 15;
+      footerY = pageHeight - margin - 10;
     }
 
     doc.setDrawColor(200, 200, 200);
@@ -402,3 +402,4 @@ export default function MtrForm() {
     </div>
   );
 }
+
