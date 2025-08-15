@@ -522,7 +522,7 @@ export default function MtrBaixaPage() {
   const limparCNPJ = (cnpj: string) => cnpj.replace(/\D/g, '');
   
   // Converte a quantidade recebida de KG para Toneladas e já trunca
-  const qtdRecebidaEmToneladas = truncarNumero(parseNumberWithCommas(form.qtdRecebida) / 1000, 6);
+  const qtdRecebidaEmToneladas = truncarNumero(parseNumberWithCommas(form.qtdRecebida) / 1000, 5);
 
   const payload = {
     login: '02661308016',
@@ -532,11 +532,11 @@ export default function MtrBaixaPage() {
       const residuosDoMTR = Array.isArray(m.residuos) ? m.residuos : [m.residuos];
 
       // Divide a quantidade total e trunca
-      const qtdTotalParaEsteMTR = truncarNumero(qtdRecebidaEmToneladas / mtrsValidos.length, 6);
+      const qtdTotalParaEsteMTR = truncarNumero(qtdRecebidaEmToneladas / mtrsValidos.length, 5);
       
       // Divide por residuo e trunca novamente
       const qtdPorCadaResiduoNesteMTR = residuosDoMTR.length > 0 
-                                       ? truncarNumero(qtdTotalParaEsteMTR / residuosDoMTR.length, 6)
+                                       ? truncarNumero(qtdTotalParaEsteMTR / residuosDoMTR.length, 5)
                                        : 0;
 
       return {
@@ -829,4 +829,5 @@ export default function MtrBaixaPage() {
     </div>
   );
 }
+
 
