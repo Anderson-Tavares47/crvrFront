@@ -130,15 +130,15 @@ export default function MtrBaixaPage() {
         throw new Error("Resposta vazia recebida do servidor");
       }
 
-      if (resposta.success) {      
+      if (resposta.success) {
         if (resposta.data && typeof resposta.data === 'object') {
           const manifestos = resposta.data.data.manifestoRecebimentoJSONs || [];
-          
+
           if (Array.isArray(manifestos)) {
             const erros = manifestos.filter(
               (item: any) => item.retornoCodigo !== undefined && item.retornoCodigo !== 0
             );
-          
+
             setRetornosErro(erros);
 
             if (erros.length === 0) {
@@ -187,7 +187,7 @@ export default function MtrBaixaPage() {
   const formatNumberWithCommas = (value: string): string => {
     // Remove todos os caracteres não numéricos, exceto ponto decimal
     const rawValue = value.replace(/[^\d.]/g, '');
-    
+
     // Verifica se é um número válido
     if (rawValue === '' || rawValue === '.') {
       return rawValue;
@@ -238,10 +238,10 @@ export default function MtrBaixaPage() {
   const formatDate = (dateString: string) => {
     if (!dateString) return '';
     if (/^\d{8}$/.test(dateString)) return dateString;
-    
+
     const date = new Date(dateString);
     if (isNaN(date.getTime())) return '';
-    
+
     date.setMinutes(date.getMinutes() + date.getTimezoneOffset());
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -256,7 +256,7 @@ export default function MtrBaixaPage() {
     if (!form.nomeMotorista.trim()) newErrors.nomeMotorista = "Nome do motorista é obrigatório";
     if (!form.recebimentoMtrData) newErrors.recebimentoMtrData = "Data de recebimento é obrigatória";
     if (!form.transporteMtrData) newErrors.transporteMtrData = "Data de transporte é obrigatória";
-    
+
     if (!form.qtdRecebida) {
       newErrors.qtdRecebida = "Quantidade recebida é obrigatória";
     } else {
@@ -438,143 +438,149 @@ export default function MtrBaixaPage() {
     setConsultando(false);
   }
 
- 
 
 
 
-//   function gerarObjetoFinal() {
-//    if (!validateForm()) return;
-//   if (mtrsValidos.length === 0) {
-//     alert("Nenhum MTR válido para gerar o JSON");
-//     return;
-//   }
 
-//   const limparCNPJ = (cnpj: string) => cnpj.replace(/\D/g, '');
-//   // Converte a quantidade recebida de KG para Toneladas.
-//   const qtdRecebidaEmToneladas = parseNumberWithCommas(form.qtdRecebida) / 1000;
+  //   function gerarObjetoFinal() {
+  //    if (!validateForm()) return;
+  //   if (mtrsValidos.length === 0) {
+  //     alert("Nenhum MTR válido para gerar o JSON");
+  //     return;
+  //   }
 
-//   const payload = {
-//     login: '02661308016',
-//     senha: 'saoleopoldo2021',
-//     cnp: '03505185000346',
-//     manifestoRecebimentoJSONs: mtrsValidos.map((m) => {
-//       // Garante que 'm.residuos' é sempre um array para iterar.
-//       const residuosDoMTR = Array.isArray(m.residuos) ? m.residuos : [m.residuos];
+  //   const limparCNPJ = (cnpj: string) => cnpj.replace(/\D/g, '');
+  //   // Converte a quantidade recebida de KG para Toneladas.
+  //   const qtdRecebidaEmToneladas = parseNumberWithCommas(form.qtdRecebida) / 1000;
 
-//       // Divide a quantidade total de recebimento igualmente entre os MTRs válidos.
-//       const qtdTotalParaEsteMTR = qtdRecebidaEmToneladas / mtrsValidos.length;
-      
-//       // Divide a quantidade de cada MTR igualmente entre os resíduos dentro daquele MTR.
-//       const qtdPorCadaResiduoNesteMTR = residuosDoMTR.length > 0 
-//                                          ? qtdTotalParaEsteMTR / residuosDoMTR.length
-//                                          : 0; // Evita divisão por zero
+  //   const payload = {
+  //     login: '02661308016',
+  //     senha: 'saoleopoldo2021',
+  //     cnp: '03505185000346',
+  //     manifestoRecebimentoJSONs: mtrsValidos.map((m) => {
+  //       // Garante que 'm.residuos' é sempre um array para iterar.
+  //       const residuosDoMTR = Array.isArray(m.residuos) ? m.residuos : [m.residuos];
 
-//       return {
-//         manifestoCodigo: m.numeroMTR,
-//         cnpGerador: limparCNPJ(m.gerador?.cnpj || ''),
-//         cnpTransportador: limparCNPJ(m.transportador?.cnpj || ''),
-//         recebimentoMtrResponsavel: form.recebimentoMtrResponsavel,
-//         recebimentoMtrCargo: form.recebimentoMtrCargo,
-//         recebimentoMtrData: formatDate(form.recebimentoMtrData),
-//         transporteMtrData: formatDate(form.transporteMtrData),
-//         recebimentoMtrObs: form.recebimentoMtrObs || '',
-//         nomeMotorista: form.nomeMotorista,
-//         placaVeiculo: form.placaVeiculo,
-//         itemManifestoRecebimentoJSONs: residuosDoMTR.map((residuo, index) => {
-//           return {
-//             codigoSequencial: index + 1,
-//             justificativa: null,
-//             codigoInterno: null,
-//             // Usando a quantidade calculada para cada resíduo
-//             qtdRecebida: qtdPorCadaResiduoNesteMTR, 
-//             residuo: residuo.codigoIbama?.replace(/\D/g, '') || '',
-//             codigoAcondicionamento: listas.acondicionamentos.find((item) =>
-//               item.tipoDescricao.toLowerCase().includes(residuo.acondicionamento?.toLowerCase() || '')
-//             )?.tipoCodigo || 1,
-//             codigoClasse: residuo.classe === 'IIA' ? 3 : 1,
-//             codigoTecnologia: residuo.tecnologia === 'Aterro' ? 7 : 5,
-//             codigoTipoEstado: residuo.estadoFisico === 'Sólido' ? 1 : 2,
-//             codigoUnidade: residuo.unidade === 'Tonelada' ? 4 : 1
-//           };
-//         })
-//       };
-//     })
-//   };
+  //       // Divide a quantidade total de recebimento igualmente entre os MTRs válidos.
+  //       const qtdTotalParaEsteMTR = qtdRecebidaEmToneladas / mtrsValidos.length;
 
-//   console.log('Payload para envio:', JSON.stringify(payload, null, 2));
-//   return payload;
-// }
+  //       // Divide a quantidade de cada MTR igualmente entre os resíduos dentro daquele MTR.
+  //       const qtdPorCadaResiduoNesteMTR = residuosDoMTR.length > 0 
+  //                                          ? qtdTotalParaEsteMTR / residuosDoMTR.length
+  //                                          : 0; // Evita divisão por zero
+
+  //       return {
+  //         manifestoCodigo: m.numeroMTR,
+  //         cnpGerador: limparCNPJ(m.gerador?.cnpj || ''),
+  //         cnpTransportador: limparCNPJ(m.transportador?.cnpj || ''),
+  //         recebimentoMtrResponsavel: form.recebimentoMtrResponsavel,
+  //         recebimentoMtrCargo: form.recebimentoMtrCargo,
+  //         recebimentoMtrData: formatDate(form.recebimentoMtrData),
+  //         transporteMtrData: formatDate(form.transporteMtrData),
+  //         recebimentoMtrObs: form.recebimentoMtrObs || '',
+  //         nomeMotorista: form.nomeMotorista,
+  //         placaVeiculo: form.placaVeiculo,
+  //         itemManifestoRecebimentoJSONs: residuosDoMTR.map((residuo, index) => {
+  //           return {
+  //             codigoSequencial: index + 1,
+  //             justificativa: null,
+  //             codigoInterno: null,
+  //             // Usando a quantidade calculada para cada resíduo
+  //             qtdRecebida: qtdPorCadaResiduoNesteMTR, 
+  //             residuo: residuo.codigoIbama?.replace(/\D/g, '') || '',
+  //             codigoAcondicionamento: listas.acondicionamentos.find((item) =>
+  //               item.tipoDescricao.toLowerCase().includes(residuo.acondicionamento?.toLowerCase() || '')
+  //             )?.tipoCodigo || 1,
+  //             codigoClasse: residuo.classe === 'IIA' ? 3 : 1,
+  //             codigoTecnologia: residuo.tecnologia === 'Aterro' ? 7 : 5,
+  //             codigoTipoEstado: residuo.estadoFisico === 'Sólido' ? 1 : 2,
+  //             codigoUnidade: residuo.unidade === 'Tonelada' ? 4 : 1
+  //           };
+  //         })
+  //       };
+  //     })
+  //   };
+
+  //   console.log('Payload para envio:', JSON.stringify(payload, null, 2));
+  //   return payload;
+  // }
 
 
   function gerarObjetoFinal() {
-  if (!validateForm()) return;
-  if (mtrsValidos.length === 0) {
-    alert("Nenhum MTR válido para gerar o JSON");
-    return;
+    if (!validateForm()) return;
+    if (mtrsValidos.length === 0) {
+      alert("Nenhum MTR válido para gerar o JSON");
+      return;
+    }
+
+    // Função para truncar números sem arredondamento
+    const truncarNumero = (num: number, casasDecimais: number): number => {
+      const fator = Math.pow(10, casasDecimais);
+      return Math.floor(num * fator) / fator; // Usamos floor para evitar arredondamento para cima
+    };
+
+    const limparCNPJ = (cnpj: string) => cnpj.replace(/\D/g, '');
+
+    // Converte a quantidade recebida de KG para Toneladas e já trunca
+    const qtdRecebidaEmToneladas = truncarNumero(parseNumberWithCommas(form.qtdRecebida) / 1000, 6);
+    console.log('Quantidade recebida em toneladas:', qtdRecebidaEmToneladas);
+    
+
+    const payload = {
+      login: '02661308016',
+      senha: 'saoleopoldo2021',
+      cnp: '03505185000346',
+      manifestoRecebimentoJSONs: mtrsValidos.map((m) => {
+        const residuosDoMTR = Array.isArray(m.residuos) ? m.residuos : [m.residuos];
+
+        // Divide a quantidade total e trunca
+        const qtdTotalParaEsteMTR = truncarNumero(qtdRecebidaEmToneladas / mtrsValidos.length, 5);
+        console.log('Quantidade total para este MTR validos:', mtrsValidos.length);
+        console.log('Quantidade total para este MTR:', qtdTotalParaEsteMTR);
+
+        // // Divide por residuo e trunca novamente
+        // const qtdPorCadaResiduoNesteMTR = residuosDoMTR.length > 0
+        //   ? truncarNumero(qtdTotalParaEsteMTR / residuosDoMTR.length, 5)
+        //   : 0;
+
+        //   console.log('Quantidade por resíduo neste MTR:', qtdPorCadaResiduoNesteMTR);
+          
+
+        return {
+          manifestoCodigo: m.numeroMTR,
+          cnpGerador: limparCNPJ(m.gerador?.cnpj || ''),
+          cnpTransportador: limparCNPJ(m.transportador?.cnpj || ''),
+          recebimentoMtrResponsavel: form.recebimentoMtrResponsavel,
+          recebimentoMtrCargo: form.recebimentoMtrCargo,
+          recebimentoMtrData: formatDate(form.recebimentoMtrData),
+          transporteMtrData: formatDate(form.transporteMtrData),
+          recebimentoMtrObs: form.recebimentoMtrObs || '',
+          nomeMotorista: form.nomeMotorista,
+          placaVeiculo: form.placaVeiculo,
+          itemManifestoRecebimentoJSONs: residuosDoMTR.map((residuo, index) => {
+            return {
+              codigoSequencial: index + 1,
+              justificativa: null,
+              codigoInterno: null,
+              // Valor já truncado com 6 casas decimais
+              qtdRecebida: qtdTotalParaEsteMTR,
+              residuo: residuo.codigoIbama?.replace(/\D/g, '') || '',
+              codigoAcondicionamento: listas.acondicionamentos.find((item) =>
+                item.tipoDescricao.toLowerCase().includes(residuo.acondicionamento?.toLowerCase() || '')
+              )?.tipoCodigo || 1,
+              codigoClasse: residuo.classe === 'IIA' ? 3 : 1,
+              codigoTecnologia: residuo.tecnologia === 'Aterro' ? 7 : 5,
+              codigoTipoEstado: residuo.estadoFisico === 'Sólido' ? 1 : 2,
+              codigoUnidade: residuo.unidade === 'Tonelada' ? 4 : 1
+            };
+          })
+        };
+      })
+    };
+
+    console.log('Payload para envio:', JSON.stringify(payload, null, 2));
+    return payload;
   }
-
-  // Função para truncar números sem arredondamento
-  const truncarNumero = (num: number, casasDecimais: number): number => {
-    const fator = Math.pow(10, casasDecimais);
-    return Math.floor(num * fator) / fator; // Usamos floor para evitar arredondamento para cima
-  };
-
-  const limparCNPJ = (cnpj: string) => cnpj.replace(/\D/g, '');
-  
-  // Converte a quantidade recebida de KG para Toneladas e já trunca
-  const qtdRecebidaEmToneladas = truncarNumero(parseNumberWithCommas(form.qtdRecebida) / 1000, 5);
-
-  const payload = {
-    login: '02661308016',
-    senha: 'saoleopoldo2021',
-    cnp: '03505185000346',
-    manifestoRecebimentoJSONs: mtrsValidos.map((m) => {
-      const residuosDoMTR = Array.isArray(m.residuos) ? m.residuos : [m.residuos];
-
-      // Divide a quantidade total e trunca
-      const qtdTotalParaEsteMTR = truncarNumero(qtdRecebidaEmToneladas / mtrsValidos.length, 5);
-      
-      // // Divide por residuo e trunca novamente
-      // const qtdPorCadaResiduoNesteMTR = residuosDoMTR.length > 0 
-      //                                  ? truncarNumero(qtdTotalParaEsteMTR / residuosDoMTR.length, 5)
-      //                                  : 0;
-
-
-      return {
-        manifestoCodigo: m.numeroMTR,
-        cnpGerador: limparCNPJ(m.gerador?.cnpj || ''),
-        cnpTransportador: limparCNPJ(m.transportador?.cnpj || ''),
-        recebimentoMtrResponsavel: form.recebimentoMtrResponsavel,
-        recebimentoMtrCargo: form.recebimentoMtrCargo,
-        recebimentoMtrData: formatDate(form.recebimentoMtrData),
-        transporteMtrData: formatDate(form.transporteMtrData),
-        recebimentoMtrObs: form.recebimentoMtrObs || '',
-        nomeMotorista: form.nomeMotorista,
-        placaVeiculo: form.placaVeiculo,
-        itemManifestoRecebimentoJSONs: residuosDoMTR.map((residuo, index) => {
-          return {
-            codigoSequencial: index + 1,
-            justificativa: null,
-            codigoInterno: null,
-            // Valor já truncado com 5 casas decimais
-            qtdRecebida: qtdTotalParaEsteMTR,
-            residuo: residuo.codigoIbama?.replace(/\D/g, '') || '',
-            codigoAcondicionamento: listas.acondicionamentos.find((item) =>
-              item.tipoDescricao.toLowerCase().includes(residuo.acondicionamento?.toLowerCase() || '')
-            )?.tipoCodigo || 1,
-            codigoClasse: residuo.classe === 'IIA' ? 3 : 1,
-            codigoTecnologia: residuo.tecnologia === 'Aterro' ? 7 : 5,
-            codigoTipoEstado: residuo.estadoFisico === 'Sólido' ? 1 : 2,
-            codigoUnidade: residuo.unidade === 'Tonelada' ? 4 : 1
-          };
-        })
-      };
-    })
-  };
-
-  console.log('Payload para envio:', JSON.stringify(payload, null, 2));
-  return payload;
-}
 
 
 
@@ -602,10 +608,20 @@ export default function MtrBaixaPage() {
           onChange={handleChange}
           placeholder={placeholder}
           className={`w-full p-2 text-sm border rounded-md transition-colors duration-200
-            ${error ? 'border-red-500 focus:ring-red-500 focus:border-red-500' :
-              'border-gray-300 focus:ring-blue-500 focus:border-blue-500'}
-            focus:outline-none focus:ring-2`}
+    ${error
+              ? 'border-red-500 focus:ring-red-500 focus:border-red-500'
+              : 'border-gray-300'}
+    focus:outline-none focus:ring-2`}
+          style={
+            error
+              ? {}
+              : {
+                ['--tw-ring-color' as any]: '#293f58',
+                borderColor: '#293f58',
+              }
+          }
         />
+
         {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
       </div>
     );
@@ -640,19 +656,29 @@ export default function MtrBaixaPage() {
         <textarea
           ref={textareaRef}
           className={`w-full p-3 border rounded-md focus:ring-2 focus:outline-none transition-colors duration-200
-            ${mtrsInvalidos.length > 0 || mtrsDuplicados.length > 0 ?
-              'border-red-300 focus:ring-red-500 focus:border-red-500' :
-              'border-gray-300 focus:ring-blue-500 focus:border-blue-500'}`}
+    ${mtrsInvalidos.length > 0 || mtrsDuplicados.length > 0
+              ? 'border-red-300 focus:ring-red-500 focus:border-red-500'
+              : 'border-gray-300'}
+  `}
+          style={
+            mtrsInvalidos.length > 0 || mtrsDuplicados.length > 0
+              ? {}
+              : {
+                ['--tw-ring-color' as any]: '#293f58',
+                borderColor: '#293f58',
+              }
+          }
           rows={8}
-          placeholder="Digite ou cole os MTRs (um por linha ou separados por espaços/tabs)\nApenas os 10 primeiros dígitos serão considerados"
+          placeholder={`Digite ou cole os MTRs (um por linha ou separados por espaços/tabs)\nApenas os 10 primeiros dígitos serão considerados`}
           onChange={handleTextareaChange}
           onKeyDown={handleTextareaKeyDown}
           onPaste={handlePaste}
         />
 
+
         <div className="flex flex-wrap items-center gap-4 mt-4">
           <button
-            className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors 
+            className="bg-[#293f58] text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors 
               disabled:bg-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
             onClick={consultarMtrs}
             disabled={consultando || mtrsSelecionados.length === 0}
@@ -747,29 +773,29 @@ export default function MtrBaixaPage() {
               )}
 
               {(form.qtdRecebida && mtrsValidos.length > 0) && (
-  <div className="md:col-span-1"> {/* Pode ser col-span-1 ou 2, dependendo do layout desejado */}
-    <label className="block text-sm font-medium text-gray-700 mb-1">
-      Distribuição Estimada por MTR
-    </label>
-    <div className="bg-blue-50 border border-blue-200 rounded-md p-2">
-      <p className="text-sm font-semibold text-blue-800">
-        Quantidade por MTR:{" "}
-        {(() => {
-          const qtdRecebidaEmToneladas = parseNumberWithCommas(form.qtdRecebida) / 1000;
-          const qtdPorMTR = mtrsValidos.length > 0 
-                            ? qtdRecebidaEmToneladas / mtrsValidos.length 
-                            : 0;
-          return `${qtdPorMTR.toFixed(6)} toneladas`;
-        })()}
-      </p>
-      {mtrsValidos.length > 0 && (
-        <p className="text-xs text-gray-600 mt-1">
-          Baseado em {mtrsValidos.length} MTR(s) válidos.
-        </p>
-      )}
-    </div>
-  </div>
-)}
+                <div className="md:col-span-1"> {/* Pode ser col-span-1 ou 2, dependendo do layout desejado */}
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Distribuição Estimada por MTR
+                  </label>
+                  <div className="bg-blue-50 border border-blue-200 rounded-md p-2">
+                    <p className="text-sm font-semibold text-blue-800">
+                      Quantidade por MTR:{" "}
+                      {(() => {
+                        const qtdRecebidaEmToneladas = parseNumberWithCommas(form.qtdRecebida) / 1000;
+                        const qtdPorMTR = mtrsValidos.length > 0
+                          ? qtdRecebidaEmToneladas / mtrsValidos.length
+                          : 0;
+                        return `${qtdPorMTR.toFixed(6)} toneladas`;
+                      })()}
+                    </p>
+                    {mtrsValidos.length > 0 && (
+                      <p className="text-xs text-gray-600 mt-1">
+                        Baseado em {mtrsValidos.length} MTR(s) válidos.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
 
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Observações</label>
@@ -778,24 +804,34 @@ export default function MtrBaixaPage() {
                   value={form.recebimentoMtrObs}
                   onChange={handleChange}
                   className={`w-full p-2 text-sm border rounded-md transition-colors duration-200
-                    ${errors.recebimentoMtrObs ? 'border-red-500 focus:ring-red-500 focus:border-red-500' :
-                      'border-gray-300 focus:ring-blue-500 focus:border-blue-500'}
-                    focus:outline-none focus:ring-2`}
+    ${errors.recebimentoMtrObs
+                      ? 'border-red-500 focus:ring-red-500 focus:border-red-500'
+                      : 'border-gray-300'}
+    focus:outline-none focus:ring-2`}
+                  style={
+                    errors.recebimentoMtrObs
+                      ? {}
+                      : {
+                        ['--tw-ring-color' as any]: '#293f58',
+                        borderColor: '#293f58',
+                      }
+                  }
                   rows={2}
                 />
+
               </div>
             </div>
           </div>
           <div className="flex justify-end space-x-4">
             <button
-              className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition-colors 
+              className="bg-[#293f58] text-white px-6 py-2 rounded-md hover:bg-blue-700 transition-colors 
                 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
               onClick={gerarObjetoFinal}
             >
               Gerar JSON Final
             </button>
             <button
-              className="bg-green-600 text-white px-6 py-2 rounded-md hover:bg-green-700 transition-colors 
+              className="bg-[#293f58] text-white px-6 py-2 rounded-md hover:bg-green-700 transition-colors 
                 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
               onClick={handleEnviarDados}
             >
@@ -807,7 +843,7 @@ export default function MtrBaixaPage() {
             <div className="mt-6 bg-red-50 border border-red-300 rounded-lg p-4">
               <div className="flex justify-between items-center mb-2">
                 <h3 className="text-red-700 font-semibold">Erros no processamento:</h3>
-                <button 
+                <button
                   onClick={() => setRetornosErro([])}
                   className="text-sm text-red-600 hover:text-red-800"
                 >
@@ -830,8 +866,4 @@ export default function MtrBaixaPage() {
     </div>
   );
 }
-
-
-
-
 
