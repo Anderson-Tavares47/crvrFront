@@ -539,6 +539,16 @@ export default function MtrBaixaPage() {
                                        ? truncarNumero(qtdTotalParaEsteMTR / residuosDoMTR.length, 5)
                                        : 0;
 
+      const totalTon = parseNumberWithCommas(form.qtdRecebida) / 1000; // sem truncar aqui
+
+// Por MTR (truncar uma vez só)
+const porMTR = truncarNumero(totalTon / mtrsValidos.length, 5);
+
+// Por resíduo (não use porMTR aqui; derive do total novamente)
+const partes = mtrsValidos.length * (residuosDoMTR.length || 1);
+const porResiduo = truncarNumero(totalTon / partes, 5);
+
+
       return {
         manifestoCodigo: m.numeroMTR,
         cnpGerador: limparCNPJ(m.gerador?.cnpj || ''),
@@ -555,8 +565,8 @@ export default function MtrBaixaPage() {
             codigoSequencial: index + 1,
             justificativa: null,
             codigoInterno: null,
-            // Valor já truncado com 6 casas decimais
-            qtdRecebida: qtdPorCadaResiduoNesteMTR,
+            // Valor já truncado com 5 casas decimais
+            qtdRecebida: porMTR,
             residuo: residuo.codigoIbama?.replace(/\D/g, '') || '',
             codigoAcondicionamento: listas.acondicionamentos.find((item) =>
               item.tipoDescricao.toLowerCase().includes(residuo.acondicionamento?.toLowerCase() || '')
@@ -829,5 +839,6 @@ export default function MtrBaixaPage() {
     </div>
   );
 }
+
 
 
