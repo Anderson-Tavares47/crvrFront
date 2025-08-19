@@ -534,10 +534,10 @@ export default function MtrBaixaPage() {
       // Divide a quantidade total e trunca
       const qtdTotalParaEsteMTR = truncarNumero(qtdRecebidaEmToneladas / mtrsValidos.length, 5);
       
-      // Divide por residuo e trunca novamente
-      const qtdPorCadaResiduoNesteMTR = residuosDoMTR.length > 0 
-                                       ? truncarNumero(qtdTotalParaEsteMTR / residuosDoMTR.length, 5)
-                                       : 0;
+      // // Divide por residuo e trunca novamente
+      // const qtdPorCadaResiduoNesteMTR = residuosDoMTR.length > 0 
+      //                                  ? truncarNumero(qtdTotalParaEsteMTR / residuosDoMTR.length, 5)
+      //                                  : 0;
 
       const totalTon = parseNumberWithCommas(form.qtdRecebida) / 1000; // sem truncar aqui
 
@@ -839,6 +839,7 @@ const porResiduo = truncarNumero(totalTon / partes, 5);
     </div>
   );
 }
+
 
 
 
