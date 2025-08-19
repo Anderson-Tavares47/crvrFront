@@ -10,14 +10,15 @@ export default function MtrForm() {
   const [resultados, setResultados] = useState<any[]>([]);
   const [erroInput, setErroInput] = useState("");
   const [gerandoPDF, setGerandoPDF] = useState(false);
+  const [ordenacao, setOrdenacao] = useState<'decrescente' | 'crescente'>('decrescente');
 
   const filaRef = useRef<string[]>([]);
   const processandoRef = useRef(false);
   const emProcessamentoRef = useRef<Set<string>>(new Set());
-  const inputRef = useRef<HTMLInputElement>(null); // Ref para foco automático
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    inputRef.current?.focus(); // Focar o input ao carregar
+    inputRef.current?.focus();
   }, []);
 
   const processarFila = async () => {
@@ -25,90 +26,95 @@ export default function MtrForm() {
     processandoRef.current = true;
 
     const proximo = filaRef.current.shift();
-    if (proximo) {
-      try {
-        const res = await consultarMtrServer(proximo);
+    if (!proximo) {
+      processandoRef.current = false;
+      return;
+    }
 
-        if (res?.erro && !res.data) {
-          setResultados((prev) => [
-            ...prev,
-            {
-              data: { numeroMTR: proximo },
-              validation: { code: 999, message: res.mensagem },
-            },
-          ]);
-        } else {
-          const numeroMTR = res.data?.numeroMTR;
-          const jaExiste = resultados.some(
-            (item) => item?.data?.numeroMTR === numeroMTR
+    try {
+      const res = await consultarMtrServer(proximo);
+
+      // Monta o item-base (com ou sem dados válidos)
+      let novoItem: any;
+
+      if (res?.erro && !res.data) {
+        // Caso de erro de consulta (sem data)
+        novoItem = {
+          data: { numeroMTR: proximo },
+          validation: { code: 999, message: res?.mensagem ?? 'Erro na consulta' },
+          validacaoData: null,
+        };
+      } else {
+        // Caso de sucesso (ou retorno com data)
+        const numeroMTR = res?.data?.numeroMTR ?? proximo;
+
+        // Validação de data de emissão (dd/mm/yyyy)
+        let validacaoData: { code: number; message: string } | null = null;
+        const dataEmissao = res?.data?.dataEmissao;
+        if (dataEmissao) {
+          const [dia, mes, ano] = dataEmissao.split('/').map(Number);
+          const dataEmissaoDate = new Date(ano, mes - 1, dia);
+          const hoje = new Date();
+          const hojeNormalizado = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
+          const diffDias = Math.floor(
+            (hojeNormalizado.getTime() - dataEmissaoDate.getTime()) / (1000 * 60 * 60 * 24)
           );
 
-          if (!jaExiste) {
-            const dataEmissao = res.data?.dataEmissao;
-            let validacaoData = null;
+          const emissaoISO = new Date(ano, mes - 1, dia).toISOString().split('T')[0];
+          const hojeISO = hojeNormalizado.toISOString().split('T')[0];
 
-            // function formatarDataBR(data: Date): string {
-            //   const dia = String(data.getDate()).padStart(2, '0');
-            //   const mes = String(data.getMonth() + 1).padStart(2, '0');
-            //   const ano = data.getFullYear();
-            //   return `${dia}/${mes}/${ano}`;
-            // }
-
-            if (dataEmissao) {
-              const [dia, mes, ano] = dataEmissao.split("/").map(Number);
-              const dataEmissaoDate = new Date(ano, mes - 1, dia);
-              const hoje = new Date();
-              const hojeNormalizado = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
-              const diffDias = Math.floor(
-                (hoje.getTime() - dataEmissaoDate.getTime()) / (1000 * 60 * 60 * 24)
-              );
-              
-             const hojeISO = hojeNormalizado.toISOString().split('T')[0]; 
-              const emissaoISO = dataEmissaoDate.toISOString().split('T')[0];
-
-              if (emissaoISO > hojeISO) {
-                validacaoData = {
-                  code: 1001,
-                  message: "Data de emissão no futuro",
-                };
-              } else if (diffDias > 30) {
-                validacaoData = {
-                  code: 1002,
-                  message: "Data de emissão superior a 30 dias",
-                };
-              }
-            }
-
-            setResultados((prev) => [
-              ...prev,
-              {
-                ...res,
-                validacaoData,
-              },
-            ]);
+          if (emissaoISO > hojeISO) {
+            validacaoData = { code: 1001, message: 'Data de emissão no futuro' };
+          } else if (diffDias > 30) {
+            validacaoData = { code: 1002, message: 'Data de emissão superior a 30 dias' };
           }
         }
-      } catch (error) {
-        console.error("Erro ao consultar MTR:", error);
-        setResultados((prev) => [
+
+        novoItem = {
+          ...res,
+          data: { ...(res?.data ?? {}), numeroMTR },
+          validacaoData,
+        };
+      }
+
+      // Insere com ordem calculada a partir do estado anterior (sem pular)
+      setResultados(prev => {
+        // Anti-duplicata por número MTR
+        const numero = novoItem?.data?.numeroMTR;
+        if (numero && prev.some(i => i?.data?.numeroMTR === numero)) {
+          return prev; // já existe → não insere nem mexe na ordem
+        }
+
+        const ultimaOrdem = prev.length > 0 ? (prev[prev.length - 1].ordem ?? 0) : 0;
+        const ordem = ultimaOrdem + 1;
+
+        return [...prev, { ...novoItem, ordem }];
+      });
+    } catch (error) {
+      console.error('Erro ao consultar MTR:', error);
+
+      // Mesmo no erro, calcula ordem com base no estado atual
+      setResultados(prev => {
+        const ultimaOrdem = prev.length > 0 ? (prev[prev.length - 1].ordem ?? 0) : 0;
+        const ordem = ultimaOrdem + 1;
+
+        return [
           ...prev,
           {
             data: { numeroMTR: proximo },
-            validation: {
-              code: 998,
-              message: "Erro ao consultar MTR",
-            },
+            validation: { code: 998, message: 'Erro ao consultar MTR' },
+            validacaoData: null,
+            ordem,
           },
-        ]);
-      } finally {
-        emProcessamentoRef.current.delete(proximo);
-        processandoRef.current = false;
-        setTimeout(processarFila, 100);
-      }
-    } else {
+        ];
+      });
+    } finally {
+      emProcessamentoRef.current.delete(proximo);
       processandoRef.current = false;
+      setTimeout(processarFila, 100);
     }
   };
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -138,18 +144,32 @@ export default function MtrForm() {
     processarFila();
   };
 
-  const limparResultados = () => {
-    setResultados([]);
+  const limparResultados = () => setResultados([]);
+
+
+  const removerMtr = (numeroMTR: string) => {
+    setResultados(prev => prev.filter(item => item.data.numeroMTR !== numeroMTR));
+    // Não alteramos o contadorOrdemRef para manter a consistência dos itens restantes
   };
 
+  const toggleOrdenacao = () => {
+    setOrdenacao(prev => prev === 'decrescente' ? 'crescente' : 'decrescente');
+  };
+
+  // Ordenação visual sem alterar a ordem lógica
+  const resultadosOrdenados = [...resultados].sort((a, b) => {
+    return ordenacao === 'decrescente'
+      ? b.ordem - a.ordem // Mais recentes primeiro (maior ordem)
+      : a.ordem - b.ordem; // Mais antigos primeiro (menor ordem)
+  });
 
   const gerarPDF = () => {
     setGerandoPDF(true);
 
     const doc = new jsPDF();
-    const mtrsValidos = resultados.filter(
-      (r) => r.validation?.code === 200 && !r.validacaoData
-    );
+    const mtrsValidos = [...resultados]
+      .filter((r) => r.validation?.code === 200 && !r.validacaoData)
+      .sort((a, b) => b.ordem - a.ordem); // Ordena por ordem decrescente no PDF
 
     if (mtrsValidos.length === 0) {
       alert("Não há MTRs válidos para gerar o relatório!");
@@ -192,8 +212,8 @@ export default function MtrForm() {
 
     const hoje = new Date();
     const dataFormatada = hoje.toLocaleDateString('pt-BR');
-    const horaFormatada = hoje.getHours().toLocaleString('pt-BR')
-    const minutosFormatado = hoje.getMinutes().toLocaleString('pt-BR')
+    const horaFormatada = hoje.getHours().toString().padStart(2, '0');
+    const minutosFormatado = hoje.getMinutes().toString().padStart(2, '0');
     doc.setFontSize(10);
 
     doc.setDrawColor(200, 200, 200);
@@ -248,28 +268,23 @@ export default function MtrForm() {
     });
 
     doc.setPage(currentPage);
-    let footerY = pageHeight - margin - 10;
+    let footerY = pageHeight - margin - 15;
     if (yPosition > footerY - 20) {
       doc.addPage();
-      footerY = pageHeight - margin - 10;
+      footerY = pageHeight - margin - 15;
     }
 
     doc.setDrawColor(200, 200, 200);
-    // doc.line(margin, footerY, pageWidth - margin, footerY);
     footerY += lineHeight;
 
     doc.setFontSize(16);
-    doc.text("Assinatura do Motorista: ___________________________", margin, footerY);
+    doc.text("Assinatura do Motorista: ________________________________________", margin, footerY);
     footerY += lineHeight;
     doc.text(`Data: ${dataFormatada}, ${horaFormatada}:${minutosFormatado}`, margin, footerY);
 
     doc.save(`Relatorio_MTRs_${dataFormatada.replace(/\//g, '-')}.pdf`);
     setGerandoPDF(false);
   };
-
-  const handleSendMtr = async () => {
-    window.location.href = '/receberManifesto';
-    };
 
   return (
     <div className="w-full px-4 mt-8">
@@ -280,14 +295,24 @@ export default function MtrForm() {
           placeholder="Digite ou bip o código de barras do MTR"
           value={mtr}
           onChange={(e) => setMtr(e.target.value)}
-          className={`w-full p-3 mb-[5px] border rounded-md focus:outline-none focus:ring-2 ${erroInput ? "border-red-500 focus:ring-red-500" : "border-gray-300 focus:ring-blue-600"}`}
+          className={`w-full p-3 mb-[5px] border rounded-md focus:outline-none focus:ring-2 
+            ${erroInput ? "border-red-500 focus:ring-red-500" : "border-gray-300"}`}
+          style={
+            erroInput
+              ? {}
+              : {
+                ['--tw-ring-color' as any]: '#293f58',
+                borderColor: '#293f58',
+              }
+          }
         />
+
         {erroInput && <p className="text-red-500 text-sm mt-1">{erroInput}</p>}
 
         <div className="flex flex-wrap gap-2">
           <button
             type="submit"
-            className="flex-1 bg-blue-600 text-white py-3 rounded-md hover:bg-blue-700 transition"
+            className="flex-1 bg-[#293f58] text-white py-3 rounded-md hover:bg-blue-700 transition cursor-pointer"
           >
             Adicionar
           </button>
@@ -295,22 +320,31 @@ export default function MtrForm() {
             type="button"
             onClick={limparResultados}
             disabled={resultados.length === 0}
-            className={`flex-1 py-3 rounded-md transition ${resultados.length > 0
-              ? 'bg-red-600 text-white hover:bg-red-700'
-              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+            className={`flex-1 py-3 rounded-md transition cursor-pointer ${resultados.length > 0
+                ? 'bg-red-600 text-white hover:bg-red-700'
+                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
               }`}
           >
             Limpar Lista
           </button>
-
-
+          <button
+            type="button"
+            onClick={toggleOrdenacao}
+            disabled={resultados.length === 0}
+            className={`flex-1 py-3 rounded-md transition cursor-pointer ${resultados.length > 0
+                ? 'bg-[#293f58] text-white hover:bg-blue-700'
+                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              }`}
+          >
+            {ordenacao === 'decrescente' ? 'Mais Antigos ↑' : 'Mais Recentes ↓'}
+          </button>
           <button
             type="button"
             onClick={gerarPDF}
             disabled={resultados.filter(r => r.validation?.code === 200 && !r.validacaoData).length === 0 || gerandoPDF}
-            className={`flex-1 py-3 rounded-md transition flex items-center justify-center ${resultados.filter(r => r.validation?.code === 200 && !r.validacaoData).length > 0
-              ? 'bg-green-600 text-white hover:bg-green-700'
-              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+            className={`flex-1 py-3 rounded-md transition flex items-center justify-center cursor-pointer ${resultados.filter(r => r.validation?.code === 200 && !r.validacaoData).length > 0
+                ? 'bg-[#293f58] text-white hover:bg-green-700'
+                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
               }`}
           >
             {gerandoPDF ? (
@@ -325,33 +359,41 @@ export default function MtrForm() {
               'Gerar Relatório (PDF)'
             )}
           </button>
-          <button
-             onClick={handleSendMtr}
-            className="flex-1 bg-blue-600 text-white py-3 rounded-md hover:bg-blue-700 transition"
-          >
-            Baixar MTR
-          </button>
         </div>
       </form>
 
       <div className="mt-8 grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {resultados.map((resultado, index) => (
+        {resultadosOrdenados.map((resultado) => (
           resultado?.data && resultado?.validation && (
             <div
-              key={index}
-              className={`bg-white border rounded-lg shadow-sm p-5 w-full hover:shadow-md transition ${resultado.validation.code === 200
+              key={`${resultado.data.numeroMTR}-${resultado.ordem}`} // Chave única com ordem
+              className={`bg-white border rounded-lg shadow-sm p-5 w-full hover:shadow-md transition relative ${resultado.validation.code === 200
                   ? resultado.validacaoData
                     ? 'border-yellow-200'
                     : 'border-green-200'
                   : 'border-red-200'
                 }`}
             >
-              <div className="flex items-center justify-between flex-wrap gap-2">
+              <div className="absolute -top-2 -left-2 bg-[#293f58] text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold">
+                {resultado.ordem}
+              </div>
+
+              <button
+                onClick={() => removerMtr(resultado.data.numeroMTR)}
+                className="absolute top-3 right-3 text-gray-400 hover:text-red-500 transition-colors cursor-pointer"
+                title="Remover MTR"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </button>
+
+              <div className="flex items-center justify-between flex-wrap gap-2 mt-1">
                 <h3 className="text-base font-bold text-gray-800">
                   Manifesto #{resultado.data.numeroMTR ?? "N/A"}
                 </h3>
 
-                <div className="flex flex-col gap-1 items-end">
+                <div className="flex flex-col gap-1 items-end mr-6">
                   <span
                     className={`text-xs px-3 py-1 rounded-full font-medium ${resultado.validation.code === 200
                         ? resultado.validacaoData
@@ -384,14 +426,6 @@ export default function MtrForm() {
                       <span className="font-medium">Data de Recebimento:</span>{" "}
                       {resultado.data.dataRecebimento ?? "Ainda não recebido"}
                     </p>
-                    <p>
-                      <span className="font-medium">Gerador:</span>{" "}
-                      {resultado.data.gerador?.nome ?? "Desconhecido"}
-                    </p>
-                    <p>
-                      <span className="font-medium">Município:</span>{" "}
-                      {resultado.data.gerador?.municipio ?? "Desconhecido"}
-                    </p>
                   </div>
                 </>
               )}
@@ -402,4 +436,3 @@ export default function MtrForm() {
     </div>
   );
 }
-
