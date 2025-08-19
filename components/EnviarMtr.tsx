@@ -523,9 +523,7 @@ export default function MtrBaixaPage() {
 
     // Converte a quantidade recebida de KG para Toneladas e já trunca
     const qtdRecebidaEmToneladas = truncarNumero(parseNumberWithCommas(form.qtdRecebida) / 1000, 6);
-    console.log('Quantidade recebida em toneladas:', qtdRecebidaEmToneladas);
     
-
     const payload = {
       login: '02661308016',
       senha: 'saoleopoldo2021',
@@ -535,8 +533,6 @@ export default function MtrBaixaPage() {
 
         // Divide a quantidade total e trunca
         const qtdTotalParaEsteMTR = truncarNumero(qtdRecebidaEmToneladas / mtrsValidos.length, 5);
-        console.log('Quantidade total para este MTR validos:', mtrsValidos.length);
-        console.log('Quantidade total para este MTR:', qtdTotalParaEsteMTR);
 
         // // Divide por residuo e trunca novamente
         // const qtdPorCadaResiduoNesteMTR = residuosDoMTR.length > 0
@@ -866,5 +862,6 @@ export default function MtrBaixaPage() {
     </div>
   );
 }
+
 
 
