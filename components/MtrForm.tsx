@@ -169,7 +169,7 @@ export default function MtrForm() {
     const doc = new jsPDF();
     const mtrsValidos = [...resultados]
       .filter((r) => r.validation?.code === 200 && !r.validacaoData)
-      .sort((a, b) => b.ordem - a.ordem); // Ordena por ordem decrescente no PDF
+      .sort((a, b) => a.ordem - b.ordem); // Ordena por ordem decrescente no PDF
 
     if (mtrsValidos.length === 0) {
       alert("Não há MTRs válidos para gerar o relatório!");
@@ -436,3 +436,4 @@ export default function MtrForm() {
     </div>
   );
 }
+
