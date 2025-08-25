@@ -268,7 +268,7 @@ export default function MtrForm() {
     });
 
     doc.setPage(currentPage);
-    let footerY = pageHeight - margin - 15;
+    let footerY = pageHeight - margin - 8;
     if (yPosition > footerY - 20) {
       doc.addPage();
       footerY = pageHeight - margin - 15;
@@ -436,4 +436,5 @@ export default function MtrForm() {
     </div>
   );
 }
+
 
