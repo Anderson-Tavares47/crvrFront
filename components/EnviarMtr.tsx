@@ -71,30 +71,62 @@ export default function MtrBaixaPage() {
   const [consultando, setConsultando] = useState(false);
   const [mtrsDuplicados, setMtrsDuplicados] = useState<string[]>([]);
 
-  useEffect(() => {
-    async function carregarListas() {
-      try {
-        const dados = await buscarListas();
-        setListas({
-          acondicionamentos: dados.acondicionamentos.unidades || [],
-          classes: dados.classes.unidades || [],
-          estadosFisicos: dados.estadosFisicos.unidades || [],
-          residuos: dados.residuos.unidades || [],
-          tecnologias: dados.tecnologias.unidades || [],
-          unidades: dados.unidades.unidades || []
-        });
-      } catch (error) {
-        console.error("Erro ao carregar listas:", error);
-      } finally {
-        setLoading(false);
-      }
-    }
-    carregarListas();
+  // useEffect(() => {
+  //   async function carregarListas() {
+  //     try {
+  //       const dados = await buscarListas();
+  //       setListas({
+  //         acondicionamentos: dados.acondicionamentos.unidades || [],
+  //         classes: dados.classes.unidades || [],
+  //         estadosFisicos: dados.estadosFisicos.unidades || [],
+  //         residuos: dados.residuos.unidades || [],
+  //         tecnologias: dados.tecnologias.unidades || [],
+  //         unidades: dados.unidades.unidades || []
+  //       });
+  //     } catch (error) {
+  //       console.error("Erro ao carregar listas:", error);
+  //     } finally {
+  //       setLoading(false);
+  //     }
+  //   }
+  //   carregarListas();
 
-    if (textareaRef.current) {
-      textareaRef.current.focus();
+  //   if (textareaRef.current) {
+  //     textareaRef.current.focus();
+  //   }
+  // }, []);
+
+  useEffect(() => {
+  async function carregarListas() {
+    const cache = localStorage.getItem("listasMTR");
+    if (cache) {
+      setListas(JSON.parse(cache));
+      setLoading(false);
+      return;
     }
-  }, []);
+
+    try {
+      const dados = await buscarListas();
+      const listasFormatadas = {
+        acondicionamentos: dados.acondicionamentos.unidades || [],
+        classes: dados.classes.unidades || [],
+        estadosFisicos: dados.estadosFisicos.unidades || [],
+        residuos: dados.residuos.unidades || [],
+        tecnologias: dados.tecnologias.unidades || [],
+        unidades: dados.unidades.unidades || []
+      };
+      setListas(listasFormatadas);
+      localStorage.setItem("listasMTR", JSON.stringify(listasFormatadas));
+    } catch (error) {
+      console.error("Erro ao carregar listas:", error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  carregarListas();
+}, []);
+
 
   const limparDados = () => {
     setMtrsSelecionados([]);
@@ -862,6 +894,7 @@ export default function MtrBaixaPage() {
     </div>
   );
 }
+
 
 
 
