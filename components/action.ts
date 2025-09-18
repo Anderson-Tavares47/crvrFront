@@ -2,7 +2,7 @@
 
 import { buscarManifestoMTR } from "../core/consultaMtr";
 import { enviarMtrLote } from "../core/enviarMtr";
-import { obterListaAcondicionamento, obterListaClasse, obterListaEstadoFisico, obterListaResiduo, obterListaTecnologia, obterListaUnidades } from "../core/listas";
+import { obterListaAcondicionamento, obterListaClasse, obterListaEstadoFisico, obterListaResiduo, obterListaTecnologia, obterListaUnidades, obterTodasListasSafe } from "../core/listas";
 
 export async function consultarMtrServer(numeroMtr: string) {
 
@@ -58,6 +58,7 @@ export async function enviarMtr(payload: any) {
 export async function buscarListasUnificada() {
   return await obterTodasListasSafe();
 }
+
 
 
 
