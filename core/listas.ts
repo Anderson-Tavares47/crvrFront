@@ -58,4 +58,26 @@ export async function obterListaTecnologia() {
     },
   });
   return response.json();
+
+}
+
+
+export async function obterTodasListasSafe() {
+  try {
+    const res = await fetch(`${API_BASE}/api/mtr/todas-listas`, {
+      method: "POST", // 👈 corrigido
+    });
+
+    console.log(res, '=============')
+
+    if (!res.ok) {
+      throw new Error("Erro ao buscar todas as listas");
+    }
+
+
+    return await res.json();
+  } catch (error) {
+    console.error("❌ Erro em obterTodasListasSafe:", error);
+    throw error;
+  }
 }
