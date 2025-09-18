@@ -50,7 +50,7 @@ export default function MtrForm() {
 
         // Validação de data de emissão (dd/mm/yyyy)
         let validacaoData: { code: number; message: string } | null = null;
-        const dataEmissao = res?.data?.dataEmissao;
+        const dataEmissao = res?.data?.dataTransporte;
         if (dataEmissao) {
           const [dia, mes, ano] = dataEmissao.split('/').map(Number);
           const dataEmissaoDate = new Date(ano, mes - 1, dia);
@@ -436,5 +436,6 @@ export default function MtrForm() {
     </div>
   );
 }
+
 
 
