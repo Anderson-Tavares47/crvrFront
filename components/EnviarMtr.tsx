@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { buscarListas, buscarListasUnificada, enviarMtr } from './action';
+import { buscarListasUnificada, enviarMtr } from './action';
 
 interface ListaItem {
   [key: string]: any;
@@ -927,6 +927,7 @@ export default function MtrBaixaPage() {
     </div>
   );
 }
+
 
 
 
