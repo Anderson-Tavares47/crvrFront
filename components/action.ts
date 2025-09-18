@@ -55,4 +55,9 @@ export async function enviarMtr(payload: any) {
 }
 
 
+export async function buscarListasUnificada() {
+  return await obterTodasListasSafe();
+}
+
+
 
