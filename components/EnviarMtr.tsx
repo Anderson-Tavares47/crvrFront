@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { buscarListasUnificada, enviarMtr } from './action';
+import { buscarListasUnificada, consultarMtrServer, enviarMtr } from './action';
 
 interface ListaItem {
   [key: string]: any;
@@ -410,165 +410,197 @@ export default function MtrBaixaPage() {
     }
   };
 
-  async function consultarMtrs() {
-    const { unicos, duplicados } = processarMTRs(mtrsSelecionados);
+  // async function consultarMtrs() {
+  //   const { unicos, duplicados } = processarMTRs(mtrsSelecionados);
 
-    if (unicos.length === 0) {
-      alert("Por favor, insira pelo menos um MTR válido para consulta");
-      return;
-    }
-
-    setConsultando(true);
-    setMtrsValidos([]);
-    setMtrsInvalidos([]);
-    setMtrsDuplicados(duplicados);
-
-    const resultados: MTRResponse[] = [];
-    const erros: MtrError[] = [];
-
-    const STATUS = {
-      OK: 200,
-      RECEBIDO: 405,
-      CANCELADO: 406,
-      DESTINADOR_INVALIDO: 407,
-      TEMPORARIO: 405
-    };
-
-    for (const codigo of unicos) {
-      try {
-        const res = await fetch('https://crvrbackv2.vercel.app/api/mtr/manifesto-pdf', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ manifestoCodigo: codigo }),
-        });
-
-        const data = await res.json();
-
-        switch (res.status) {
-          case STATUS.OK:
-            if (data.validation?.isValid) {
-              resultados.push(data.data);
-            } else {
-              erros.push({
-                codigo,
-                erro: "MTR inválido (validação falhou)"
-              });
-            }
-            break;
-
-          case STATUS.RECEBIDO:
-            erros.push({
-              codigo,
-              erro: "MTR já recebido anteriormente (Status 405 - Recebido)"
-            });
-            break;
-
-          case STATUS.CANCELADO:
-            erros.push({
-              codigo,
-              erro: "MTR cancelado (Status 406 - Cancelado)"
-            });
-            break;
-
-          case STATUS.DESTINADOR_INVALIDO:
-            erros.push({
-              codigo,
-              erro: "CNPJ do destinador não corresponde ao gerador (Status 407)"
-            });
-            break;
-
-          case STATUS.TEMPORARIO:
-            erros.push({
-              codigo,
-              erro: "MTR temporário não pode ser recebido (Status 405 - Temporário)"
-            });
-            break;
-
-          default:
-            erros.push({
-              codigo,
-              erro: `Erro desconhecido (Status ${res.status})`
-            });
-        }
-      } catch {
-        erros.push({
-          codigo,
-          erro: "Falha na conexão com o servidor"
-        });
-      }
-    }
-
-    setMtrsValidos(resultados);
-    setMtrsInvalidos(erros);
-    setConsultando(false);
-  }
-
-
-
-
-
-  //   function gerarObjetoFinal() {
-  //    if (!validateForm()) return;
-  //   if (mtrsValidos.length === 0) {
-  //     alert("Nenhum MTR válido para gerar o JSON");
+  //   if (unicos.length === 0) {
+  //     alert("Por favor, insira pelo menos um MTR válido para consulta");
   //     return;
   //   }
 
-  //   const limparCNPJ = (cnpj: string) => cnpj.replace(/\D/g, '');
-  //   // Converte a quantidade recebida de KG para Toneladas.
-  //   const qtdRecebidaEmToneladas = parseNumberWithCommas(form.qtdRecebida) / 1000;
+  //   setConsultando(true);
+  //   setMtrsValidos([]);
+  //   setMtrsInvalidos([]);
+  //   setMtrsDuplicados(duplicados);
 
-  //   const payload = {
-  //     login: '02661308016',
-  //     senha: 'saoleopoldo2021',
-  //     cnp: '03505185000346',
-  //     manifestoRecebimentoJSONs: mtrsValidos.map((m) => {
-  //       // Garante que 'm.residuos' é sempre um array para iterar.
-  //       const residuosDoMTR = Array.isArray(m.residuos) ? m.residuos : [m.residuos];
+  //   const resultados: MTRResponse[] = [];
+  //   const erros: MtrError[] = [];
 
-  //       // Divide a quantidade total de recebimento igualmente entre os MTRs válidos.
-  //       const qtdTotalParaEsteMTR = qtdRecebidaEmToneladas / mtrsValidos.length;
-
-  //       // Divide a quantidade de cada MTR igualmente entre os resíduos dentro daquele MTR.
-  //       const qtdPorCadaResiduoNesteMTR = residuosDoMTR.length > 0 
-  //                                          ? qtdTotalParaEsteMTR / residuosDoMTR.length
-  //                                          : 0; // Evita divisão por zero
-
-  //       return {
-  //         manifestoCodigo: m.numeroMTR,
-  //         cnpGerador: limparCNPJ(m.gerador?.cnpj || ''),
-  //         cnpTransportador: limparCNPJ(m.transportador?.cnpj || ''),
-  //         recebimentoMtrResponsavel: form.recebimentoMtrResponsavel,
-  //         recebimentoMtrCargo: form.recebimentoMtrCargo,
-  //         recebimentoMtrData: formatDate(form.recebimentoMtrData),
-  //         transporteMtrData: formatDate(form.transporteMtrData),
-  //         recebimentoMtrObs: form.recebimentoMtrObs || '',
-  //         nomeMotorista: form.nomeMotorista,
-  //         placaVeiculo: form.placaVeiculo,
-  //         itemManifestoRecebimentoJSONs: residuosDoMTR.map((residuo, index) => {
-  //           return {
-  //             codigoSequencial: index + 1,
-  //             justificativa: null,
-  //             codigoInterno: null,
-  //             // Usando a quantidade calculada para cada resíduo
-  //             qtdRecebida: qtdPorCadaResiduoNesteMTR, 
-  //             residuo: residuo.codigoIbama?.replace(/\D/g, '') || '',
-  //             codigoAcondicionamento: listas.acondicionamentos.find((item) =>
-  //               item.tipoDescricao.toLowerCase().includes(residuo.acondicionamento?.toLowerCase() || '')
-  //             )?.tipoCodigo || 1,
-  //             codigoClasse: residuo.classe === 'IIA' ? 3 : 1,
-  //             codigoTecnologia: residuo.tecnologia === 'Aterro' ? 7 : 5,
-  //             codigoTipoEstado: residuo.estadoFisico === 'Sólido' ? 1 : 2,
-  //             codigoUnidade: residuo.unidade === 'Tonelada' ? 4 : 1
-  //           };
-  //         })
-  //       };
-  //     })
+  //   const STATUS = {
+  //     OK: 200,
+  //     RECEBIDO: 405,
+  //     CANCELADO: 406,
+  //     DESTINADOR_INVALIDO: 407,
+  //     TEMPORARIO: 405
   //   };
 
-  //   console.log('Payload para envio:', JSON.stringify(payload, null, 2));
-  //   return payload;
+  //   for (const codigo of unicos) {
+  //     try {
+  //       const res = await fetch('https://crvrbackv2.vercel.app/api/mtr/manifesto-pdf', {
+  //         method: 'POST',
+  //         headers: { 'Content-Type': 'application/json' },
+  //         body: JSON.stringify({ manifestoCodigo: codigo }),
+  //       });
+
+  //       const data = await res.json();
+
+  //       switch (res.status) {
+  //         case STATUS.OK:
+  //           if (data.validation?.isValid) {
+  //             resultados.push(data.data);
+  //           } else {
+  //             erros.push({
+  //               codigo,
+  //               erro: "MTR inválido (validação falhou)"
+  //             });
+  //           }
+  //           break;
+
+  //         case STATUS.RECEBIDO:
+  //           erros.push({
+  //             codigo,
+  //             erro: "MTR já recebido anteriormente (Status 405 - Recebido)"
+  //           });
+  //           break;
+
+  //         case STATUS.CANCELADO:
+  //           erros.push({
+  //             codigo,
+  //             erro: "MTR cancelado (Status 406 - Cancelado)"
+  //           });
+  //           break;
+
+  //         case STATUS.DESTINADOR_INVALIDO:
+  //           erros.push({
+  //             codigo,
+  //             erro: "CNPJ do destinador não corresponde ao gerador (Status 407)"
+  //           });
+  //           break;
+
+  //         case STATUS.TEMPORARIO:
+  //           erros.push({
+  //             codigo,
+  //             erro: "MTR temporário não pode ser recebido (Status 405 - Temporário)"
+  //           });
+  //           break;
+
+  //         default:
+  //           erros.push({
+  //             codigo,
+  //             erro: `Erro desconhecido (Status ${res.status})`
+  //           });
+  //       }
+  //     } catch {
+  //       erros.push({
+  //         codigo,
+  //         erro: "Falha na conexão com o servidor"
+  //       });
+  //     }
+  //   }
+
+  //   setMtrsValidos(resultados);
+  //   setMtrsInvalidos(erros);
+  //   setConsultando(false);
   // }
+
+
+
+async function consultarMtrs() {
+  const { unicos, duplicados } = processarMTRs(mtrsSelecionados);
+
+  if (unicos.length === 0) {
+    alert("Por favor, insira pelo menos um MTR válido para consulta");
+    return;
+  }
+
+  setConsultando(true);
+  setMtrsValidos([]);
+  setMtrsInvalidos([]);
+  setMtrsDuplicados(duplicados);
+
+  const resultados: MTRResponse[] = [];
+  const erros: MtrError[] = [];
+
+  const STATUS = {
+    OK: 200,
+    RECEBIDO: 405,
+    CANCELADO: 406,
+    DESTINADOR_INVALIDO: 407,
+    TEMPORARIO: 405
+  };
+
+  for (const codigo of unicos) {
+    try {
+      const data = await consultarMtrServer(codigo);
+
+      // quando o server já retorna erro tratado
+      if (data.erro) {
+        erros.push({
+          codigo,
+          erro: data.mensagem || "Erro ao consultar MTR"
+        });
+        continue;
+      }
+
+      // segue a mesma lógica de status
+      switch (data.validation?.code) {
+        case STATUS.OK:
+          if (data.validation?.isValid) {
+            resultados.push(data.data);
+          } else {
+            erros.push({
+              codigo,
+              erro: "MTR inválido (validação falhou)"
+            });
+          }
+          break;
+
+        case STATUS.RECEBIDO:
+          erros.push({
+            codigo,
+            erro: "MTR já recebido anteriormente (Status 405 - Recebido)"
+          });
+          break;
+
+        case STATUS.CANCELADO:
+          erros.push({
+            codigo,
+            erro: "MTR cancelado (Status 406 - Cancelado)"
+          });
+          break;
+
+        case STATUS.DESTINADOR_INVALIDO:
+          erros.push({
+            codigo,
+            erro: "CNPJ do destinador não corresponde ao gerador (Status 407)"
+          });
+          break;
+
+        case STATUS.TEMPORARIO:
+          erros.push({
+            codigo,
+            erro: "MTR temporário não pode ser recebido (Status 405 - Temporário)"
+          });
+          break;
+
+        default:
+          erros.push({
+            codigo,
+            erro: `Erro desconhecido (Status ${data.validation?.code || "N/A"})`
+          });
+      }
+    } catch {
+      erros.push({
+        codigo,
+        erro: "Falha na conexão com o servidor"
+      });
+    }
+  }
+
+  setMtrsValidos(resultados);
+  setMtrsInvalidos(erros);
+  setConsultando(false);
+}
 
 
   function gerarObjetoFinal() {
@@ -927,6 +959,7 @@ export default function MtrBaixaPage() {
     </div>
   );
 }
+
 
 
 
