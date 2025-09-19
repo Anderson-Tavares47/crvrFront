@@ -436,7 +436,7 @@ export default function MtrBaixaPage() {
 
     for (const codigo of unicos) {
       try {
-        const res = await fetch('https://crvr-back.vercel.app/api/mtr/manifesto-pdf', {
+        const res = await fetch('https://crvrbackv2.vercel.app/api/mtr/manifesto-pdf', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ manifestoCodigo: codigo }),
@@ -927,6 +927,7 @@ export default function MtrBaixaPage() {
     </div>
   );
 }
+
 
 
 
