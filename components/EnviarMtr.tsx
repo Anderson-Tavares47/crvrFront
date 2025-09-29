@@ -632,9 +632,9 @@ async function consultarMtrs() {
         const qtdTotalParaEsteMTR = truncarNumero(qtdRecebidaEmToneladas / mtrsValidos.length, 5);
 
         // // Divide por residuo e trunca novamente
-        // const qtdPorCadaResiduoNesteMTR = residuosDoMTR.length > 0
-        //   ? truncarNumero(qtdTotalParaEsteMTR / residuosDoMTR.length, 5)
-        //   : 0;
+        const qtdPorCadaResiduoNesteMTR = residuosDoMTR.length > 0
+          ? truncarNumero(qtdTotalParaEsteMTR / residuosDoMTR.length, 5)
+          : 0;
 
         //   console.log('Quantidade por resíduo neste MTR:', qtdPorCadaResiduoNesteMTR);
           
@@ -656,7 +656,8 @@ async function consultarMtrs() {
               justificativa: null,
               codigoInterno: null,
               // Valor já truncado com 6 casas decimais
-              qtdRecebida: qtdTotalParaEsteMTR,
+              // qtdRecebida: qtdTotalParaEsteMTR,
+               qtdRecebida: qtdPorCadaResiduoNesteMTR,
               residuo: residuo.codigoIbama?.replace(/\D/g, '') || '',
               codigoAcondicionamento: listas.acondicionamentos.find((item) =>
                 item.tipoDescricao.toLowerCase().includes(residuo.acondicionamento?.toLowerCase() || '')
@@ -959,6 +960,7 @@ async function consultarMtrs() {
     </div>
   );
 }
+
 
 
 
