@@ -267,20 +267,43 @@ export default function MtrForm() {
       currentLine++;
     });
 
+    // doc.setPage(currentPage);
+    // let footerY = pageHeight - margin - 8;
+    // if (yPosition > footerY - 20) {
+    //   doc.addPage();
+    //   footerY = pageHeight - margin - 15;
+    // }
+
+    // doc.setDrawColor(200, 200, 200);
+    // footerY += lineHeight;
+
+    // doc.setFontSize(16);
+    // doc.text("Assinatura do Motorista: ________________________________________", margin, footerY);
+    // footerY += lineHeight;
+    // doc.text(`Data: ${dataFormatada}, ${horaFormatada}:${minutosFormatado}`, margin, footerY);
+
     doc.setPage(currentPage);
-    let footerY = pageHeight - margin - 8;
-    if (yPosition > footerY - 20) {
-      doc.addPage();
-      footerY = pageHeight - margin - 15;
-    }
+let footerY = pageHeight - margin - 20; // reserva espaço suficiente pro rodapé
 
-    doc.setDrawColor(200, 200, 200);
-    footerY += lineHeight;
+// Se a próxima linha da assinatura ultrapassar o limite da página
+if (yPosition + (lineHeight * 3) > footerY) {
+  doc.addPage();
+  currentPage++;
+  footerY = pageHeight - margin - 20;
+}
 
-    doc.setFontSize(16);
-    doc.text("Assinatura do Motorista: ________________________________________", margin, footerY);
-    footerY += lineHeight;
-    doc.text(`Data: ${dataFormatada}, ${horaFormatada}:${minutosFormatado}`, margin, footerY);
+doc.setFontSize(16);
+doc.text(
+  "Assinatura do Motorista:________________________________________",
+  margin,
+  footerY
+);
+doc.text(
+  `Data: ${dataFormatada}, ${horaFormatada}:${minutosFormatado}`,
+  margin,
+  footerY + lineHeight
+);
+
 
     doc.save(`Relatorio_MTRs_${dataFormatada.replace(/\//g, '-')}.pdf`);
     setGerandoPDF(false);
@@ -436,6 +459,7 @@ export default function MtrForm() {
     </div>
   );
 }
+
 
 
 
