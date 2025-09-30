@@ -664,8 +664,8 @@ async function consultarMtrs() {
                 item.tipoDescricao.toLowerCase().includes(residuo.acondicionamento?.toLowerCase() || '')
               )?.tipoCodigo || 1,
               codigoClasse: residuo.classe === 'IIA' ? 3 : 1,
-              // codigoTecnologia: residuo.tecnologia === 'Aterro' ? 7 : 5,
-              codigoTecnologia: residuo.tecnologia === 'Aterro',
+              codigoTecnologia: residuo.tecnologia === 'Aterro' ? 7 : 5,
+              // codigoTecnologia: residuo.tecnologia === 'Aterro',
               codigoTipoEstado: residuo.estadoFisico === 'Sólido' ? 1 : 2,
               codigoUnidade: residuo.unidade === 'Tonelada' ? 4 : 1
             };
@@ -962,6 +962,7 @@ async function consultarMtrs() {
     </div>
   );
 }
+
 
 
 
