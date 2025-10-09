@@ -58,22 +58,22 @@ export async function obterListaTecnologia() {
     },
   });
   return response.json();
-
 }
 
-
-export async function obterTodasListasSafe() {
+// 🔹 Nova função consolidada
+export async function obterTodasListasSafe(user: any) {
   try {
     const res = await fetch(`${API_BASE}/api/mtr/todas-listas`, {
-      method: "POST", // 👈 corrigido
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        login: user?.login,
+        senha: user?.senha,
+        cnp: user?.cnp,
+      }),
     });
 
-    console.log(res, '=============')
-
-    if (!res.ok) {
-      throw new Error("Erro ao buscar todas as listas");
-    }
-
+    if (!res.ok) throw new Error("Erro ao buscar todas as listas");
 
     return await res.json();
   } catch (error) {
@@ -81,3 +81,4 @@ export async function obterTodasListasSafe() {
     throw error;
   }
 }
+

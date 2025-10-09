@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { consultarMtrServer } from "./action";
 import jsPDF from "jspdf";
 import Logo from "../assets/img/logoCRVR.jpeg";
+import { useAuth } from "../context/AuthContext";
 
 export default function MtrForm() {
   const [mtr, setMtr] = useState("");
@@ -11,6 +12,7 @@ export default function MtrForm() {
   const [erroInput, setErroInput] = useState("");
   const [gerandoPDF, setGerandoPDF] = useState(false);
   const [ordenacao, setOrdenacao] = useState<'decrescente' | 'crescente'>('decrescente');
+  const { user } = useAuth();
 
   const filaRef = useRef<string[]>([]);
   const processandoRef = useRef(false);
@@ -32,7 +34,7 @@ export default function MtrForm() {
     }
 
     try {
-      const res = await consultarMtrServer(proximo);
+      const res = await consultarMtrServer(proximo, user);
 
       // Monta o item-base (com ou sem dados válidos)
       let novoItem: any;
@@ -62,6 +64,9 @@ export default function MtrForm() {
 
           const emissaoISO = new Date(ano, mes - 1, dia).toISOString().split('T')[0];
           const hojeISO = hojeNormalizado.toISOString().split('T')[0];
+
+          console.log(hojeISO)
+          console.log(emissaoISO, 'emissao')
 
           if (emissaoISO > hojeISO) {
             validacaoData = { code: 1001, message: 'Data de emissão no futuro' };
@@ -268,10 +273,10 @@ export default function MtrForm() {
     });
 
     doc.setPage(currentPage);
-    let footerY = pageHeight - margin - 20;
+    let footerY = pageHeight - margin - 8;
     if (yPosition > footerY - 20) {
       doc.addPage();
-      footerY = pageHeight - margin - 20;
+      footerY = pageHeight - margin - 15;
     }
 
     doc.setDrawColor(200, 200, 200);
@@ -281,7 +286,6 @@ export default function MtrForm() {
     doc.text("Assinatura do Motorista: ________________________________________", margin, footerY);
     footerY += lineHeight;
     doc.text(`Data: ${dataFormatada}, ${horaFormatada}:${minutosFormatado}`, margin, footerY);
-
 
     doc.save(`Relatorio_MTRs_${dataFormatada.replace(/\//g, '-')}.pdf`);
     setGerandoPDF(false);
@@ -322,8 +326,8 @@ export default function MtrForm() {
             onClick={limparResultados}
             disabled={resultados.length === 0}
             className={`flex-1 py-3 rounded-md transition cursor-pointer ${resultados.length > 0
-                ? 'bg-red-600 text-white hover:bg-red-700'
-                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              ? 'bg-red-600 text-white hover:bg-red-700'
+              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
               }`}
           >
             Limpar Lista
@@ -333,8 +337,8 @@ export default function MtrForm() {
             onClick={toggleOrdenacao}
             disabled={resultados.length === 0}
             className={`flex-1 py-3 rounded-md transition cursor-pointer ${resultados.length > 0
-                ? 'bg-[#293f58] text-white hover:bg-blue-700'
-                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              ? 'bg-[#293f58] text-white hover:bg-blue-700'
+              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
               }`}
           >
             {ordenacao === 'decrescente' ? 'Mais Antigos ↑' : 'Mais Recentes ↓'}
@@ -344,8 +348,8 @@ export default function MtrForm() {
             onClick={gerarPDF}
             disabled={resultados.filter(r => r.validation?.code === 200 && !r.validacaoData).length === 0 || gerandoPDF}
             className={`flex-1 py-3 rounded-md transition flex items-center justify-center cursor-pointer ${resultados.filter(r => r.validation?.code === 200 && !r.validacaoData).length > 0
-                ? 'bg-[#293f58] text-white hover:bg-green-700'
-                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              ? 'bg-[#293f58] text-white hover:bg-green-700'
+              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
               }`}
           >
             {gerandoPDF ? (
@@ -369,10 +373,10 @@ export default function MtrForm() {
             <div
               key={`${resultado.data.numeroMTR}-${resultado.ordem}`} // Chave única com ordem
               className={`bg-white border rounded-lg shadow-sm p-5 w-full hover:shadow-md transition relative ${resultado.validation.code === 200
-                  ? resultado.validacaoData
-                    ? 'border-yellow-200'
-                    : 'border-green-200'
-                  : 'border-red-200'
+                ? resultado.validacaoData
+                  ? 'border-yellow-200'
+                  : 'border-green-200'
+                : 'border-red-200'
                 }`}
             >
               <div className="absolute -top-2 -left-2 bg-[#293f58] text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold">
@@ -397,10 +401,10 @@ export default function MtrForm() {
                 <div className="flex flex-col gap-1 items-end mr-6">
                   <span
                     className={`text-xs px-3 py-1 rounded-full font-medium ${resultado.validation.code === 200
-                        ? resultado.validacaoData
-                          ? 'bg-yellow-100 text-yellow-800'
-                          : 'bg-green-100 text-green-700'
-                        : 'bg-red-100 text-red-600'
+                      ? resultado.validacaoData
+                        ? 'bg-yellow-100 text-yellow-800'
+                        : 'bg-green-100 text-green-700'
+                      : 'bg-red-100 text-red-600'
                       }`}
                   >
                     {resultado.validation.message ?? "Status desconhecido"}
@@ -437,9 +441,4 @@ export default function MtrForm() {
     </div>
   );
 }
-
-
-
-
-
 

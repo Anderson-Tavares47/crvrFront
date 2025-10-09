@@ -1,7 +1,9 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { buscarListasUnificada, consultarMtrServer, enviarMtr } from './action';
+import { buscarListasUnificada, consultarMtrServer, enviarMtr, salvarHistoricoBaixa } from './action';
+import { useAuth } from '../context/AuthContext';
+import CustomDateInput from './CustomDateInput';
 
 interface ListaItem {
   [key: string]: any;
@@ -50,6 +52,7 @@ export default function MtrBaixaPage() {
     tecnologias: [] as ListaItem[],
     unidades: [] as ListaItem[]
   });
+  const { user } = useAuth();
 
   const [loading, setLoading] = useState(true);
   const [mtrsSelecionados, setMtrsSelecionados] = useState<string[]>([]);
@@ -71,93 +74,36 @@ export default function MtrBaixaPage() {
   const [consultando, setConsultando] = useState(false);
   const [mtrsDuplicados, setMtrsDuplicados] = useState<string[]>([]);
 
-  // useEffect(() => {
-  //   async function carregarListas() {
-  //     try {
-  //       const dados = await buscarListas();
-  //       setListas({
-  //         acondicionamentos: dados.acondicionamentos.unidades || [],
-  //         classes: dados.classes.unidades || [],
-  //         estadosFisicos: dados.estadosFisicos.unidades || [],
-  //         residuos: dados.residuos.unidades || [],
-  //         tecnologias: dados.tecnologias.unidades || [],
-  //         unidades: dados.unidades.unidades || []
-  //       });
-  //     } catch (error) {
-  //       console.error("Erro ao carregar listas:", error);
-  //     } finally {
-  //       setLoading(false);
-  //     }
-  //   }
-  //   carregarListas();
+  useEffect(() => {
+    async function carregarListas() {
+      const cache = localStorage.getItem("listasMTR");
+      if (cache) {
+        setListas(JSON.parse(cache));
+        setLoading(false);
+        return;
+      }
 
-  //   if (textareaRef.current) {
-  //     textareaRef.current.focus();
-  //   }
-  // }, []);
-
-//   useEffect(() => {
-//   async function carregarListas() {
-//     const cache = localStorage.getItem("listasMTR");
-//     if (cache) {
-//       setListas(JSON.parse(cache));
-//       setLoading(false);
-//       return;
-//     }
-
-//     try {
-//       const dados = await buscarListas();
-//       const listasFormatadas = {
-//         acondicionamentos: dados.acondicionamentos.unidades || [],
-//         classes: dados.classes.unidades || [],
-//         estadosFisicos: dados.estadosFisicos.unidades || [],
-//         residuos: dados.residuos.unidades || [],
-//         tecnologias: dados.tecnologias.unidades || [],
-//         unidades: dados.unidades.unidades || []
-//       };
-//       setListas(listasFormatadas);
-//       localStorage.setItem("listasMTR", JSON.stringify(listasFormatadas));
-//     } catch (error) {
-//       console.error("Erro ao carregar listas:", error);
-//     } finally {
-//       setLoading(false);
-//     }
-//   }
-
-//   carregarListas();
-// }, []);
-
-
-   useEffect(() => {
-  async function carregarListas() {
-    const cache = localStorage.getItem("listasMTR");
-    if (cache) {
-      setListas(JSON.parse(cache));
-      setLoading(false);
-      return;
+      try {
+        const dados = await buscarListasUnificada(user); // 🔹 já chama a versão unificada
+        const listasFormatadas = {
+          acondicionamentos: dados.acondicionamentos.unidades || [],
+          classes: dados.classes.unidades || [],
+          estadosFisicos: dados.estadosFisicos.unidades || [],
+          residuos: dados.residuos.unidades || [],
+          tecnologias: dados.tecnologias.unidades || [],
+          unidades: dados.unidades.unidades || []
+        };
+        setListas(listasFormatadas);
+        localStorage.setItem("listasMTR", JSON.stringify(listasFormatadas));
+      } catch (error) {
+        console.error("Erro ao carregar listas:", error);
+      } finally {
+        setLoading(false);
+      }
     }
 
-    try {
-      const dados = await buscarListasUnificada(); // 🔹 já chama a versão unificada
-      const listasFormatadas = {
-        acondicionamentos: dados.acondicionamentos.unidades || [],
-        classes: dados.classes.unidades || [],
-        estadosFisicos: dados.estadosFisicos.unidades || [],
-        residuos: dados.residuos.unidades || [],
-        tecnologias: dados.tecnologias.unidades || [],
-        unidades: dados.unidades.unidades || []
-      };
-      setListas(listasFormatadas);
-      localStorage.setItem("listasMTR", JSON.stringify(listasFormatadas));
-    } catch (error) {
-      console.error("Erro ao carregar listas:", error);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  carregarListas();
-}, []);
+    carregarListas();
+  }, []);
 
 
 
@@ -208,8 +154,24 @@ export default function MtrBaixaPage() {
 
             if (erros.length === 0) {
               alert("Todos os MTRs foram processados com sucesso!");
+
+              // 🔹 Somente salva histórico se o usuário NÃO for administrador
+              // dentro de handleEnviarDados()
+              if (!user?.adm) {
+                const agora = new Date().toISOString();
+
+                const historicoLote = mtrsValidos.map(mtr => ({
+                  mtr: mtr.numeroMTR,
+                  usuario: user?.nome || 'Desconhecido',
+                  dataBaixa: agora,
+                }));
+
+                await salvarHistoricoBaixa(historicoLote); // envia array
+              }
+              
               limparDados();
-            } else {
+            }
+            else {
               alert(`Processamento concluído com ${erros.length} erro(s). Verifique os detalhes abaixo.`);
             }
           } else {
@@ -300,19 +262,54 @@ export default function MtrBaixaPage() {
     }
   };
 
+  // const formatDate = (dateString: string) => {
+  //   if (!dateString) return '';
+  //   if (/^\d{8}$/.test(dateString)) return dateString;
+
+  //   const date = new Date(dateString);
+  //   if (isNaN(date.getTime())) return '';
+
+  //   date.setMinutes(date.getMinutes() + date.getTimezoneOffset());
+  //   const year = date.getFullYear();
+  //   const month = String(date.getMonth() + 1).padStart(2, '0');
+  //   const day = String(date.getDate()).padStart(2, '0');
+  //   return `${year}${month}${day}`;
+  // };
+
   const formatDate = (dateString: string) => {
     if (!dateString) return '';
-    if (/^\d{8}$/.test(dateString)) return dateString;
 
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) return '';
+    // ✅ Se for no formato brasileiro (DD/MM/AAAA)
+    const match = dateString.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if (match) {
+      const [, dia, mes, ano] = match;
+      return `${ano}${mes}${dia}`; // ✅ Retorna AAAAMMDD
+    }
 
-    date.setMinutes(date.getMinutes() + date.getTimezoneOffset());
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}${month}${day}`;
+    // ✅ Se for no formato AAAA-MM-DD (do input type=date)
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+      return dateString.replace(/-/g, '');
+    }
+
+    // ✅ Se já estiver no formato AAAAMMDD
+    if (/^\d{8}$/.test(dateString)) {
+      return dateString;
+    }
+
+    // Caso inesperado (fallback)
+    try {
+      const d = new Date(dateString);
+      if (isNaN(d.getTime())) return '';
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}${month}${day}`;
+    } catch {
+      return '';
+    }
   };
+
+
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -410,197 +407,102 @@ export default function MtrBaixaPage() {
     }
   };
 
-  // async function consultarMtrs() {
-  //   const { unicos, duplicados } = processarMTRs(mtrsSelecionados);
+  async function consultarMtrs() {
+    const { unicos, duplicados } = processarMTRs(mtrsSelecionados);
 
-  //   if (unicos.length === 0) {
-  //     alert("Por favor, insira pelo menos um MTR válido para consulta");
-  //     return;
-  //   }
+    if (unicos.length === 0) {
+      alert("Por favor, insira pelo menos um MTR válido para consulta");
+      return;
+    }
 
-  //   setConsultando(true);
-  //   setMtrsValidos([]);
-  //   setMtrsInvalidos([]);
-  //   setMtrsDuplicados(duplicados);
+    setConsultando(true);
+    setMtrsValidos([]);
+    setMtrsInvalidos([]);
+    setMtrsDuplicados(duplicados);
 
-  //   const resultados: MTRResponse[] = [];
-  //   const erros: MtrError[] = [];
+    const resultados: MTRResponse[] = [];
+    const erros: MtrError[] = [];
 
-  //   const STATUS = {
-  //     OK: 200,
-  //     RECEBIDO: 405,
-  //     CANCELADO: 406,
-  //     DESTINADOR_INVALIDO: 407,
-  //     TEMPORARIO: 405
-  //   };
+    const STATUS = {
+      OK: 200,
+      RECEBIDO: 405,
+      CANCELADO: 406,
+      DESTINADOR_INVALIDO: 407,
+      TEMPORARIO: 405
+    };
 
-  //   for (const codigo of unicos) {
-  //     try {
-  //       const res = await fetch('https://crvrbackv2.vercel.app/api/mtr/manifesto-pdf', {
-  //         method: 'POST',
-  //         headers: { 'Content-Type': 'application/json' },
-  //         body: JSON.stringify({ manifestoCodigo: codigo }),
-  //       });
+    for (const codigo of unicos) {
+      try {
+        const data = await consultarMtrServer(codigo, user);
 
-  //       const data = await res.json();
+        // quando o server já retorna erro tratado
+        if (data.erro) {
+          erros.push({
+            codigo,
+            erro: data.mensagem || "Erro ao consultar MTR"
+          });
+          continue;
+        }
 
-  //       switch (res.status) {
-  //         case STATUS.OK:
-  //           if (data.validation?.isValid) {
-  //             resultados.push(data.data);
-  //           } else {
-  //             erros.push({
-  //               codigo,
-  //               erro: "MTR inválido (validação falhou)"
-  //             });
-  //           }
-  //           break;
+        // segue a mesma lógica de status
+        switch (data.validation?.code) {
+          case STATUS.OK:
+            if (data.validation?.isValid) {
+              resultados.push(data.data);
+            } else {
+              erros.push({
+                codigo,
+                erro: "MTR inválido (validação falhou)"
+              });
+            }
+            break;
 
-  //         case STATUS.RECEBIDO:
-  //           erros.push({
-  //             codigo,
-  //             erro: "MTR já recebido anteriormente (Status 405 - Recebido)"
-  //           });
-  //           break;
-
-  //         case STATUS.CANCELADO:
-  //           erros.push({
-  //             codigo,
-  //             erro: "MTR cancelado (Status 406 - Cancelado)"
-  //           });
-  //           break;
-
-  //         case STATUS.DESTINADOR_INVALIDO:
-  //           erros.push({
-  //             codigo,
-  //             erro: "CNPJ do destinador não corresponde ao gerador (Status 407)"
-  //           });
-  //           break;
-
-  //         case STATUS.TEMPORARIO:
-  //           erros.push({
-  //             codigo,
-  //             erro: "MTR temporário não pode ser recebido (Status 405 - Temporário)"
-  //           });
-  //           break;
-
-  //         default:
-  //           erros.push({
-  //             codigo,
-  //             erro: `Erro desconhecido (Status ${res.status})`
-  //           });
-  //       }
-  //     } catch {
-  //       erros.push({
-  //         codigo,
-  //         erro: "Falha na conexão com o servidor"
-  //       });
-  //     }
-  //   }
-
-  //   setMtrsValidos(resultados);
-  //   setMtrsInvalidos(erros);
-  //   setConsultando(false);
-  // }
-
-
-
-async function consultarMtrs() {
-  const { unicos, duplicados } = processarMTRs(mtrsSelecionados);
-
-  if (unicos.length === 0) {
-    alert("Por favor, insira pelo menos um MTR válido para consulta");
-    return;
-  }
-
-  setConsultando(true);
-  setMtrsValidos([]);
-  setMtrsInvalidos([]);
-  setMtrsDuplicados(duplicados);
-
-  const resultados: MTRResponse[] = [];
-  const erros: MtrError[] = [];
-
-  const STATUS = {
-    OK: 200,
-    RECEBIDO: 405,
-    CANCELADO: 406,
-    DESTINADOR_INVALIDO: 407,
-    TEMPORARIO: 405
-  };
-
-  for (const codigo of unicos) {
-    try {
-      const data = await consultarMtrServer(codigo);
-
-      // quando o server já retorna erro tratado
-      if (data.erro) {
-        erros.push({
-          codigo,
-          erro: data.mensagem || "Erro ao consultar MTR"
-        });
-        continue;
-      }
-
-      // segue a mesma lógica de status
-      switch (data.validation?.code) {
-        case STATUS.OK:
-          if (data.validation?.isValid) {
-            resultados.push(data.data);
-          } else {
+          case STATUS.RECEBIDO:
             erros.push({
               codigo,
-              erro: "MTR inválido (validação falhou)"
+              erro: "MTR já recebido anteriormente (Status 405 - Recebido)"
             });
-          }
-          break;
+            break;
 
-        case STATUS.RECEBIDO:
-          erros.push({
-            codigo,
-            erro: "MTR já recebido anteriormente (Status 405 - Recebido)"
-          });
-          break;
+          case STATUS.CANCELADO:
+            erros.push({
+              codigo,
+              erro: "MTR cancelado (Status 406 - Cancelado)"
+            });
+            break;
 
-        case STATUS.CANCELADO:
-          erros.push({
-            codigo,
-            erro: "MTR cancelado (Status 406 - Cancelado)"
-          });
-          break;
+          case STATUS.DESTINADOR_INVALIDO:
+            erros.push({
+              codigo,
+              erro: "CNPJ do destinador não corresponde ao gerador (Status 407)"
+            });
+            break;
 
-        case STATUS.DESTINADOR_INVALIDO:
-          erros.push({
-            codigo,
-            erro: "CNPJ do destinador não corresponde ao gerador (Status 407)"
-          });
-          break;
+          case STATUS.TEMPORARIO:
+            erros.push({
+              codigo,
+              erro: "MTR temporário não pode ser recebido (Status 405 - Temporário)"
+            });
+            break;
 
-        case STATUS.TEMPORARIO:
-          erros.push({
-            codigo,
-            erro: "MTR temporário não pode ser recebido (Status 405 - Temporário)"
-          });
-          break;
-
-        default:
-          erros.push({
-            codigo,
-            erro: `Erro desconhecido (Status ${data.validation?.code || "N/A"})`
-          });
+          default:
+            erros.push({
+              codigo,
+              erro: `Erro desconhecido (Status ${data.validation?.code || "N/A"})`
+            });
+        }
+      } catch {
+        erros.push({
+          codigo,
+          erro: "Falha na conexão com o servidor"
+        });
       }
-    } catch {
-      erros.push({
-        codigo,
-        erro: "Falha na conexão com o servidor"
-      });
     }
-  }
 
-  setMtrsValidos(resultados);
-  setMtrsInvalidos(erros);
-  setConsultando(false);
-}
+    setMtrsValidos(resultados);
+    setMtrsInvalidos(erros);
+    setConsultando(false);
+  }
 
 
   function gerarObjetoFinal() {
@@ -620,11 +522,14 @@ async function consultarMtrs() {
 
     // Converte a quantidade recebida de KG para Toneladas e já trunca
     const qtdRecebidaEmToneladas = truncarNumero(parseNumberWithCommas(form.qtdRecebida) / 1000, 6);
-    
+
     const payload = {
-      login: '02661308016',
-      senha: 'saoleopoldo2021',
-      cnp: '03505185000346',
+      // login: '02661308016',
+      // senha: 'saoleopoldo2021',
+      // cnp: '03505185000346',
+      login: user?.login || '',
+      senha: user?.senha || '',
+      cnp: user?.cnp || '',
       codUnidade: '61795',
       manifestoRecebimentoJSONs: mtrsValidos.map((m) => {
         const residuosDoMTR = Array.isArray(m.residuos) ? m.residuos : [m.residuos];
@@ -636,9 +541,6 @@ async function consultarMtrs() {
         const qtdPorCadaResiduoNesteMTR = residuosDoMTR.length > 0
           ? truncarNumero(qtdTotalParaEsteMTR / residuosDoMTR.length, 5)
           : 0;
-
-        //   console.log('Quantidade por resíduo neste MTR:', qtdPorCadaResiduoNesteMTR);
-          
 
         return {
           manifestoCodigo: m.numeroMTR,
@@ -658,7 +560,7 @@ async function consultarMtrs() {
               codigoInterno: null,
               // Valor já truncado com 6 casas decimais
               // qtdRecebida: qtdTotalParaEsteMTR,
-               qtdRecebida: qtdPorCadaResiduoNesteMTR,
+              qtdRecebida: qtdPorCadaResiduoNesteMTR,
               residuo: residuo.codigoIbama?.replace(/\D/g, '') || '',
               codigoAcondicionamento: listas.acondicionamentos.find((item) =>
                 item.tipoDescricao.toLowerCase().includes(residuo.acondicionamento?.toLowerCase() || '')
@@ -677,8 +579,6 @@ async function consultarMtrs() {
     console.log('Payload para envio:', JSON.stringify(payload, null, 2));
     return payload;
   }
-
-
 
 
   const renderInputField = (
@@ -733,8 +633,7 @@ async function consultarMtrs() {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-6">
-      <h1 className="text-2xl font-bold mb-6 text-gray-800">Dar baixa em MTRs</h1>
-
+      <h1 className="text-2xl font-semibold text-center mb-4">Dar baixa em MTRs</h1>
       <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 mb-6">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-semibold text-gray-700">Lista de MTRs</h3>
@@ -857,8 +756,23 @@ async function consultarMtrs() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {renderInputField("Placa do Veículo", "placaVeiculo", "text", "ABC-1234", true)}
               {renderInputField("Nome do Motorista", "nomeMotorista", "text", "", true)}
-              {renderInputField("Data de Recebimento", "recebimentoMtrData", "date", "", true)}
-              {renderInputField("Data de Transporte", "transporteMtrData", "date", "", true)}
+              <CustomDateInput
+                label="Data de Recebimento"
+                name="recebimentoMtrData"
+                value={form.recebimentoMtrData}
+                required
+                error={errors.recebimentoMtrData}
+                onChange={(name, val) => setForm(prev => ({ ...prev, [name]: val }))}
+              />
+
+              <CustomDateInput
+                label="Data de Transporte"
+                name="transporteMtrData"
+                value={form.transporteMtrData}
+                required
+                error={errors.transporteMtrData}
+                onChange={(name, val) => setForm(prev => ({ ...prev, [name]: val }))}
+              />
               {renderInputField(
                 "Quantidade Total Recebida (kg - será convertida para toneladas)",
                 "qtdRecebida",
@@ -962,7 +876,6 @@ async function consultarMtrs() {
     </div>
   );
 }
-
 
 
 
