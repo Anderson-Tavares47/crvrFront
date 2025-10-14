@@ -514,7 +514,7 @@ export default function MtrForm() {
       Gerando...
     </>
   ) : (
-    "Gerar Relatório Completo (com erros)"
+    "Gerar Relatório Completo"
   )}
 </button>
 
@@ -595,5 +595,6 @@ export default function MtrForm() {
     </div>
   );
 }
+
 
 
