@@ -168,6 +168,121 @@ export default function MtrForm() {
       : a.ordem - b.ordem; // Mais antigos primeiro (menor ordem)
   });
 
+
+  const gerarPDFCompleto = () => {
+  setGerandoPDF(true);
+
+  const doc = new jsPDF();
+  const mtrs = [...resultados].sort((a, b) => a.ordem - b.ordem);
+
+  if (mtrs.length === 0) {
+    alert("Nenhum MTR disponível para gerar o relatório completo!");
+    setGerandoPDF(false);
+    return;
+  }
+
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const margin = 15;
+  const lineHeight = 7;
+  const colWidth = (pageWidth - margin * 2) / 4;
+  const maxLinesPerCol = Math.floor((pageHeight - margin * 2 - 30) / lineHeight);
+
+  try {
+    if (Logo?.src) {
+      doc.saveGraphicsState();
+      const gState = new (doc as any).GState({ opacity: 0.1 });
+      doc.setGState(gState);
+      doc.addImage(
+        Logo.src,
+        "JPEG",
+        (pageWidth - 100) / 2,
+        (pageHeight - 100) / 2,
+        100,
+        100,
+        undefined,
+        "NONE"
+      );
+      doc.restoreGraphicsState();
+    }
+  } catch (error) {
+    console.error("Erro ao adicionar logo:", error);
+  }
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(16);
+  doc.text("RELATÓRIO COMPLETO DE MTRs", pageWidth / 2, margin, { align: "center" });
+
+  const hoje = new Date();
+  const dataFormatada = hoje.toLocaleDateString("pt-BR");
+  const horaFormatada = hoje.getHours().toString().padStart(2, "0");
+  const minutosFormatado = hoje.getMinutes().toString().padStart(2, "0");
+  doc.setFontSize(10);
+
+  let currentCol = 0;
+  let currentLine = 0;
+  let yPosition = margin + 25;
+  const colsWithContent = new Set<number>();
+
+  const addHeaders = (y: number) => {
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    for (let c = 0; c < 4; c++) {
+      if (colsWithContent.has(c)) {
+        const x = margin + c * colWidth;
+        doc.text("Nº CÓDIGO MTR", x, y);
+      }
+    }
+    doc.setFont("helvetica", "normal");
+  };
+
+  doc.setFontSize(10);
+  mtrs.forEach((r, idx) => {
+    if (currentLine >= maxLinesPerCol) {
+      currentCol++;
+      currentLine = 0;
+      if (currentCol > 3) {
+        doc.addPage();
+        currentCol = 0;
+        yPosition = margin + 25;
+        colsWithContent.clear();
+      } else {
+        yPosition = margin + 25;
+      }
+    }
+
+    colsWithContent.add(currentCol);
+    const xPosition = margin + currentCol * colWidth;
+
+    if (currentLine === 0) addHeaders(yPosition - lineHeight - 2);
+
+    const status =
+      r.validation?.message ??
+      (r.validation?.code ? `Erro ${r.validation.code}` : "Desconhecido");
+    const dataMsg = r.validacaoData?.message ? ` (${r.validacaoData.message})` : "";
+
+    doc.text(
+      `${idx + 1}. ${r.data.numeroMTR} - ${status}${dataMsg}`,
+      xPosition,
+      yPosition
+    );
+
+    yPosition += lineHeight;
+    currentLine++;
+  });
+
+  doc.text(
+    `Emitido em: ${dataFormatada}, ${horaFormatada}:${minutosFormatado}`,
+    margin,
+    pageHeight - margin
+  );
+
+  doc.save(`Relatorio_Completo_MTRs_${dataFormatada.replace(/\//g, "-")}.pdf`);
+  setGerandoPDF(false);
+};
+
+  
+
   const gerarPDF = () => {
     setGerandoPDF(true);
 
@@ -364,6 +479,45 @@ export default function MtrForm() {
               'Gerar Relatório (PDF)'
             )}
           </button>
+          <button
+  type="button"
+  onClick={gerarPDFCompleto}
+  disabled={resultados.length === 0 || gerandoPDF}
+  className={`flex-1 py-3 rounded-md transition flex items-center justify-center cursor-pointer ${
+    resultados.length > 0
+      ? "bg-[#555555] text-white hover:bg-gray-700"
+      : "bg-gray-300 text-gray-500 cursor-not-allowed"
+  }`}
+>
+  {gerandoPDF ? (
+    <>
+      <svg
+        className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+      >
+        <circle
+          className="opacity-25"
+          cx="12"
+          cy="12"
+          r="10"
+          stroke="currentColor"
+          strokeWidth="4"
+        ></circle>
+        <path
+          className="opacity-75"
+          fill="currentColor"
+          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+        ></path>
+      </svg>
+      Gerando...
+    </>
+  ) : (
+    "Gerar Relatório Completo (com erros)"
+  )}
+</button>
+
         </div>
       </form>
 
@@ -441,4 +595,5 @@ export default function MtrForm() {
     </div>
   );
 }
+
 
