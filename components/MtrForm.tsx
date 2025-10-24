@@ -170,118 +170,141 @@ export default function MtrForm() {
 
 
   const gerarPDFCompleto = () => {
-  setGerandoPDF(true);
+    setGerandoPDF(true);
 
-  const doc = new jsPDF();
-  const mtrs = [...resultados].sort((a, b) => a.ordem - b.ordem);
+    const doc = new jsPDF();
+    const mtrs = [...resultados].sort((a, b) => a.ordem - b.ordem);
 
-  if (mtrs.length === 0) {
-    alert("Nenhum MTR disponível para gerar o relatório completo!");
-    setGerandoPDF(false);
-    return;
-  }
-
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const pageHeight = doc.internal.pageSize.getHeight();
-  const margin = 15;
-  const lineHeight = 7;
-  const colWidth = (pageWidth - margin * 2) / 4;
-  const maxLinesPerCol = Math.floor((pageHeight - margin * 2 - 30) / lineHeight);
-
-  try {
-    if (Logo?.src) {
-      doc.saveGraphicsState();
-      const gState = new (doc as any).GState({ opacity: 0.1 });
-      doc.setGState(gState);
-      doc.addImage(
-        Logo.src,
-        "JPEG",
-        (pageWidth - 100) / 2,
-        (pageHeight - 100) / 2,
-        100,
-        100,
-        undefined,
-        "NONE"
-      );
-      doc.restoreGraphicsState();
+    if (mtrs.length === 0) {
+      alert("Nenhum MTR disponível para gerar o relatório completo!");
+      setGerandoPDF(false);
+      return;
     }
-  } catch (error) {
-    console.error("Erro ao adicionar logo:", error);
-  }
 
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(16);
-  doc.text("RELATÓRIO COMPLETO DE MTRs", pageWidth / 2, margin, { align: "center" });
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 15;
+    const lineHeight = 7;
+    const colWidth = (pageWidth - margin * 2) / 4;
+    const maxLinesPerCol = Math.floor((pageHeight - margin * 2 - 30) / lineHeight);
 
-  const hoje = new Date();
-  const dataFormatada = hoje.toLocaleDateString("pt-BR");
-  const horaFormatada = hoje.getHours().toString().padStart(2, "0");
-  const minutosFormatado = hoje.getMinutes().toString().padStart(2, "0");
-  doc.setFontSize(10);
+    try {
+      if (Logo?.src) {
+        doc.saveGraphicsState();
+        const gState = new (doc as any).GState({ opacity: 0.1 });
+        doc.setGState(gState);
+        doc.addImage(
+          Logo.src,
+          "JPEG",
+          (pageWidth - 100) / 2,
+          (pageHeight - 100) / 2,
+          100,
+          100,
+          undefined,
+          "NONE"
+        );
+        doc.restoreGraphicsState();
+      }
+    } catch (error) {
+      console.error("Erro ao adicionar logo:", error);
+    }
 
-  let currentCol = 0;
-  let currentLine = 0;
-  let yPosition = margin + 25;
-  const colsWithContent = new Set<number>();
-
-  const addHeaders = (y: number) => {
+    // 🔹 Cabeçalho
     doc.setFont("helvetica", "bold");
+    doc.setFontSize(16);
+    doc.text("RELATÓRIO COMPLETO DE MTRs", pageWidth / 2, margin, { align: "center" });
+
+    const hoje = new Date();
+    const dataFormatada = hoje.toLocaleDateString("pt-BR");
+    const horaFormatada = hoje.getHours().toString().padStart(2, "0");
+    const minutosFormatado = hoje.getMinutes().toString().padStart(2, "0");
     doc.setFontSize(10);
-    for (let c = 0; c < 4; c++) {
-      if (colsWithContent.has(c)) {
-        const x = margin + c * colWidth;
-        doc.text("Nº CÓDIGO MTR", x, y);
+
+    let currentCol = 0;
+    let currentLine = 0;
+    let yPosition = margin + 25;
+    const colsWithContent = new Set<number>();
+
+    const addHeaders = (y: number) => {
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(10);
+      for (let c = 0; c < 4; c++) {
+        if (colsWithContent.has(c)) {
+          const x = margin + c * colWidth;
+          doc.text("Nº CÓDIGO MTR", x, y);
+        }
       }
-    }
-    doc.setFont("helvetica", "normal");
-  };
+      doc.setFont("helvetica", "normal");
+    };
 
-  doc.setFontSize(10);
-  mtrs.forEach((r, idx) => {
-    if (currentLine >= maxLinesPerCol) {
-      currentCol++;
-      currentLine = 0;
-      if (currentCol > 3) {
-        doc.addPage();
-        currentCol = 0;
-        yPosition = margin + 25;
-        colsWithContent.clear();
-      } else {
-        yPosition = margin + 25;
+    // 🔹 Corpo
+    doc.setFontSize(10);
+    mtrs.forEach((r, idx) => {
+      if (currentLine >= maxLinesPerCol) {
+        currentCol++;
+        currentLine = 0;
+        if (currentCol > 3) {
+          doc.addPage();
+          currentCol = 0;
+          yPosition = margin + 25;
+          colsWithContent.clear();
+        } else {
+          yPosition = margin + 25;
+        }
       }
+
+      colsWithContent.add(currentCol);
+      const xPosition = margin + currentCol * colWidth;
+
+      if (currentLine === 0) addHeaders(yPosition - lineHeight - 2);
+
+      const status =
+        r.validation?.message ??
+        (r.validation?.code ? `Erro ${r.validation.code}` : "Desconhecido");
+      const dataMsg = r.validacaoData?.message ? ` (${r.validacaoData.message})` : "";
+
+      doc.text(
+        `${idx + 1}. ${r.data.numeroMTR} - ${status}${dataMsg}`,
+        xPosition,
+        yPosition
+      );
+
+      yPosition += lineHeight;
+      currentLine++;
+    });
+
+    // 🔹 Rodapé e assinatura (mantém na mesma página)
+    let footerY = pageHeight - margin - 15;
+    const alturaAssinatura = 16; // espaço total necessário para assinatura + data
+
+    if (yPosition > footerY - alturaAssinatura - 10) {
+      doc.addPage();
+      footerY = pageHeight - margin - 15;
     }
 
-    colsWithContent.add(currentCol);
-    const xPosition = margin + currentCol * colWidth;
-
-    if (currentLine === 0) addHeaders(yPosition - lineHeight - 2);
-
-    const status =
-      r.validation?.message ??
-      (r.validation?.code ? `Erro ${r.validation.code}` : "Desconhecido");
-    const dataMsg = r.validacaoData?.message ? ` (${r.validacaoData.message})` : "";
-
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(14);
     doc.text(
-      `${idx + 1}. ${r.data.numeroMTR} - ${status}${dataMsg}`,
-      xPosition,
-      yPosition
+      "Assinatura do Motorista: ________________________________________",
+      margin,
+      footerY
     );
 
-    yPosition += lineHeight;
-    currentLine++;
-  });
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.text(
+      `Emitido em: ${dataFormatada}, ${horaFormatada}:${minutosFormatado}`,
+      margin,
+      footerY + 8
+    );
 
-  doc.text(
-    `Emitido em: ${dataFormatada}, ${horaFormatada}:${minutosFormatado}`,
-    margin,
-    pageHeight - margin
-  );
+    // 🔹 Salva o PDF
+    doc.save(`Relatorio_Completo_MTRs_${dataFormatada.replace(/\//g, "-")}.pdf`);
+    setGerandoPDF(false);
+  };
 
-  doc.save(`Relatorio_Completo_MTRs_${dataFormatada.replace(/\//g, "-")}.pdf`);
-  setGerandoPDF(false);
-};
 
-  
+
 
   const gerarPDF = () => {
     setGerandoPDF(true);
@@ -429,96 +452,119 @@ export default function MtrForm() {
 
         {erroInput && <p className="text-red-500 text-sm mt-1">{erroInput}</p>}
 
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap justify-center gap-4">
           <button
             type="submit"
-            className="flex-1 bg-[#293f58] text-white py-3 rounded-md hover:bg-blue-700 transition cursor-pointer"
+            className="px-4 py-2 text-[15px] font-medium bg-[#293f58] text-white rounded-md hover:bg-blue-700 transition cursor-pointer"
           >
             Adicionar
           </button>
+
           <button
             type="button"
             onClick={limparResultados}
             disabled={resultados.length === 0}
-            className={`flex-1 py-3 rounded-md transition cursor-pointer ${resultados.length > 0
-              ? 'bg-red-600 text-white hover:bg-red-700'
-              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+            className={`px-4 py-4 text-[15px] font-medium rounded-md transition cursor-pointer ${resultados.length > 0
+              ? "bg-red-600 text-white hover:bg-red-700"
+              : "bg-gray-300 text-gray-500 cursor-not-allowed"
               }`}
           >
             Limpar Lista
           </button>
+
           <button
             type="button"
             onClick={toggleOrdenacao}
             disabled={resultados.length === 0}
-            className={`flex-1 py-3 rounded-md transition cursor-pointer ${resultados.length > 0
-              ? 'bg-[#293f58] text-white hover:bg-blue-700'
-              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+            className={`px-4 py-2 text-[15px] font-medium rounded-md transition cursor-pointer ${resultados.length > 0
+              ? "bg-[#293f58] text-white hover:bg-blue-700"
+              : "bg-gray-300 text-gray-500 cursor-not-allowed"
               }`}
           >
-            {ordenacao === 'decrescente' ? 'Mais Antigos ↑' : 'Mais Recentes ↓'}
+            {ordenacao === "decrescente" ? "Mais Antigos ↑" : "Mais Recentes ↓"}
           </button>
+
           <button
             type="button"
             onClick={gerarPDF}
-            disabled={resultados.filter(r => r.validation?.code === 200 && !r.validacaoData).length === 0 || gerandoPDF}
-            className={`flex-1 py-3 rounded-md transition flex items-center justify-center cursor-pointer ${resultados.filter(r => r.validation?.code === 200 && !r.validacaoData).length > 0
-              ? 'bg-[#293f58] text-white hover:bg-green-700'
-              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+            disabled={
+              resultados.filter((r) => r.validation?.code === 200 && !r.validacaoData)
+                .length === 0 || gerandoPDF
+            }
+            className={`px-4 py-2 text-[15px] font-medium rounded-md transition flex items-center justify-center cursor-pointer ${resultados.filter((r) => r.validation?.code === 200 && !r.validacaoData)
+              .length > 0
+              ? "bg-[#293f58] text-white hover:bg-green-700"
+              : "bg-gray-300 text-gray-500 cursor-not-allowed"
               }`}
           >
             {gerandoPDF ? (
               <>
-                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                <svg
+                  className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  ></circle>
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  ></path>
                 </svg>
                 Gerando...
               </>
             ) : (
-              'Gerar Relatório (PDF)'
+              "Gerar PDF"
             )}
           </button>
-          <button
-  type="button"
-  onClick={gerarPDFCompleto}
-  disabled={resultados.length === 0 || gerandoPDF}
-  className={`flex-1 py-3 rounded-md transition flex items-center justify-center cursor-pointer ${
-    resultados.length > 0
-      ? "bg-[#555555] text-white hover:bg-gray-700"
-      : "bg-gray-300 text-gray-500 cursor-not-allowed"
-  }`}
->
-  {gerandoPDF ? (
-    <>
-      <svg
-        className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
-        xmlns="http://www.w3.org/2000/svg"
-        fill="none"
-        viewBox="0 0 24 24"
-      >
-        <circle
-          className="opacity-25"
-          cx="12"
-          cy="12"
-          r="10"
-          stroke="currentColor"
-          strokeWidth="4"
-        ></circle>
-        <path
-          className="opacity-75"
-          fill="currentColor"
-          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-        ></path>
-      </svg>
-      Gerando...
-    </>
-  ) : (
-    "Gerar Relatório Completo"
-  )}
-</button>
 
+          <button
+            type="button"
+            onClick={gerarPDFCompleto}
+            disabled={resultados.length === 0 || gerandoPDF}
+            className={`px-4 py-2 text-[15px] font-medium rounded-md transition flex items-center justify-center cursor-pointer ${resultados.length > 0
+              ? "bg-[#555555] text-white hover:bg-gray-700"
+              : "bg-gray-300 text-gray-500 cursor-not-allowed"
+              }`}
+          >
+            {gerandoPDF ? (
+              <>
+                <svg
+                  className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  ></circle>
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  ></path>
+                </svg>
+                Gerando...
+              </>
+            ) : (
+              "Relatório Completo"
+            )}
+          </button>
         </div>
+
       </form>
 
       <div className="mt-8 grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -595,6 +641,5 @@ export default function MtrForm() {
     </div>
   );
 }
-
 
 
