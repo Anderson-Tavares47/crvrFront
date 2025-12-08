@@ -411,10 +411,18 @@ export default function MtrForm() {
     });
 
     doc.setPage(currentPage);
-    let footerY = pageHeight - margin - 8;
-    if (yPosition > footerY - 20) {
+    // let footerY = pageHeight - margin - 8;
+    // if (yPosition > footerY - 20) {
+    //   doc.addPage();
+    //   footerY = pageHeight - margin - 15;
+    // }
+
+    const assinaturaHeight = lineHeight * 3;
+    let footerY = pageHeight - margin - assinaturaHeight;
+
+    if (footerY < yPosition + lineHeight) {
       doc.addPage();
-      footerY = pageHeight - margin - 15;
+      footerY = pageHeight - margin - assinaturaHeight;
     }
 
     doc.setDrawColor(200, 200, 200);
@@ -641,5 +649,6 @@ export default function MtrForm() {
     </div>
   );
 }
+
 
 
