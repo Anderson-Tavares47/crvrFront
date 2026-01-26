@@ -23,102 +23,223 @@ export default function MtrForm() {
     inputRef.current?.focus();
   }, []);
 
-  const processarFila = async () => {
-    if (processandoRef.current || filaRef.current.length === 0) return;
-    processandoRef.current = true;
+  // const processarFila = async () => {
+  //   if (processandoRef.current || filaRef.current.length === 0) return;
+  //   processandoRef.current = true;
 
-    const proximo = filaRef.current.shift();
-    if (!proximo) {
+  //   const proximo = filaRef.current.shift();
+  //   if (!proximo) {
+  //     processandoRef.current = false;
+  //     return;
+  //   }
+
+  //   try {
+  //     const res = await consultarMtrServer(proximo, user);
+
+  //     // Monta o item-base (com ou sem dados válidos)
+  //     let novoItem: any;
+
+  //     if (res?.erro && !res.data) {
+  //       // Caso de erro de consulta (sem data)
+  //       novoItem = {
+  //         data: { numeroMTR: proximo },
+  //         validation: { code: 999, message: res?.mensagem ?? 'Erro na consulta' },
+  //         validacaoData: null,
+  //       };
+  //     } else {
+  //       // Caso de sucesso (ou retorno com data)
+  //       const numeroMTR = res?.data?.numeroMTR ?? proximo;
+
+  //       // Validação de data de emissão (dd/mm/yyyy)
+  //       let validacaoData: { code: number; message: string } | null = null;
+  //       const dataEmissao = res?.data?.dataTransporte;
+  //       if (dataEmissao) {
+  //         const [dia, mes, ano] = dataEmissao.split('/').map(Number);
+  //         const dataEmissaoDate = new Date(ano, mes - 1, dia);
+  //         const hoje = new Date();
+  //         const hojeNormalizado = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
+  //         const diffDias = Math.floor(
+  //           (hojeNormalizado.getTime() - dataEmissaoDate.getTime()) / (1000 * 60 * 60 * 24)
+  //         );
+
+  //         const emissaoISO = new Date(ano, mes - 1, dia).toISOString().split('T')[0];
+  //         const hojeISO = hojeNormalizado.toISOString().split('T')[0];
+
+  //         console.log(hojeISO)
+  //         console.log(emissaoISO, 'emissao')
+
+  //         if (emissaoISO > hojeISO) {
+  //           validacaoData = { code: 1001, message: 'Data de emissão no futuro' };
+  //         } else if (diffDias > 30) {
+  //           validacaoData = { code: 1002, message: 'Data de emissão superior a 30 dias' };
+  //         }
+  //       }
+
+  //       novoItem = {
+  //         ...res,
+  //         data: { ...(res?.data ?? {}), numeroMTR },
+  //         validacaoData,
+  //       };
+  //     }
+
+  //     // Insere com ordem calculada a partir do estado anterior (sem pular)
+  //     setResultados(prev => {
+  //       // Anti-duplicata por número MTR
+  //       const numero = novoItem?.data?.numeroMTR;
+  //       if (numero && prev.some(i => i?.data?.numeroMTR === numero)) {
+  //         return prev; // já existe → não insere nem mexe na ordem
+  //       }
+
+  //       const ultimaOrdem = prev.length > 0 ? (prev[prev.length - 1].ordem ?? 0) : 0;
+  //       const ordem = ultimaOrdem + 1;
+
+  //       return [...prev, { ...novoItem, ordem }];
+  //     });
+  //   } catch (error) {
+  //     console.error('Erro ao consultar MTR:', error);
+
+  //     // Mesmo no erro, calcula ordem com base no estado atual
+  //     setResultados(prev => {
+  //       const ultimaOrdem = prev.length > 0 ? (prev[prev.length - 1].ordem ?? 0) : 0;
+  //       const ordem = ultimaOrdem + 1;
+
+  //       return [
+  //         ...prev,
+  //         {
+  //           data: { numeroMTR: proximo },
+  //           validation: { code: 998, message: 'Erro ao consultar MTR' },
+  //           validacaoData: null,
+  //           ordem,
+  //         },
+  //       ];
+  //     });
+  //   } finally {
+  //     emProcessamentoRef.current.delete(proximo);
+  //     processandoRef.current = false;
+  //     setTimeout(processarFila, 100);
+  //   }
+  // };
+
+
+
+
+  const processarFila = async () => {
+  if (processandoRef.current || filaRef.current.length === 0) return;
+  processandoRef.current = true;
+
+  const proximo = filaRef.current.shift();
+  if (!proximo) {
+    processandoRef.current = false;
+    return;
+  }
+
+  // backoff simples por tentativa
+  const tentativaKey = `tentativas:${proximo}`;
+  (processarFila as any)[tentativaKey] = ((processarFila as any)[tentativaKey] ?? 0) + 1;
+  const tentativa = (processarFila as any)[tentativaKey] as number;
+
+  try {
+    const res = await consultarMtrServer(proximo, user);
+
+    // ✅ Se o back sinalizar 429, re-enfileira e tenta de novo
+    // (vamos padronizar o action para devolver { status: 429 } quando ocorrer)
+    if (res?.status === 429) {
+      const wait = Math.min(2000, 300 * Math.pow(2, tentativa - 1)); // 300ms, 600ms, 1200ms, 2000ms...
+      filaRef.current.unshift(proximo);
       processandoRef.current = false;
+      setTimeout(processarFila, wait);
       return;
     }
 
-    try {
-      const res = await consultarMtrServer(proximo, user);
+    // zerar contador de tentativas quando deu certo
+    delete (processarFila as any)[tentativaKey];
 
-      // Monta o item-base (com ou sem dados válidos)
-      let novoItem: any;
+    // Monta o item-base (com ou sem dados válidos)
+    let novoItem: any;
 
-      if (res?.erro && !res.data) {
-        // Caso de erro de consulta (sem data)
-        novoItem = {
-          data: { numeroMTR: proximo },
-          validation: { code: 999, message: res?.mensagem ?? 'Erro na consulta' },
-          validacaoData: null,
-        };
-      } else {
-        // Caso de sucesso (ou retorno com data)
-        const numeroMTR = res?.data?.numeroMTR ?? proximo;
+    if (res?.erro && !res.data) {
+      novoItem = {
+        data: { numeroMTR: proximo },
+        validation: { code: 999, message: res?.mensagem ?? 'Erro na consulta' },
+        validacaoData: null,
+      };
+    } else {
+      const numeroMTR = res?.data?.numeroMTR ?? proximo;
 
-        // Validação de data de emissão (dd/mm/yyyy)
-        let validacaoData: { code: number; message: string } | null = null;
-        const dataEmissao = res?.data?.dataTransporte;
-        if (dataEmissao) {
-          const [dia, mes, ano] = dataEmissao.split('/').map(Number);
-          const dataEmissaoDate = new Date(ano, mes - 1, dia);
-          const hoje = new Date();
-          const hojeNormalizado = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
-          const diffDias = Math.floor(
-            (hojeNormalizado.getTime() - dataEmissaoDate.getTime()) / (1000 * 60 * 60 * 24)
-          );
+      let validacaoData: { code: number; message: string } | null = null;
+      const dataEmissao = res?.data?.dataTransporte;
+      if (dataEmissao) {
+        const [dia, mes, ano] = dataEmissao.split('/').map(Number);
+        const dataEmissaoDate = new Date(ano, mes - 1, dia);
+        const hoje = new Date();
+        const hojeNormalizado = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
+        const diffDias = Math.floor(
+          (hojeNormalizado.getTime() - dataEmissaoDate.getTime()) / (1000 * 60 * 60 * 24)
+        );
 
-          const emissaoISO = new Date(ano, mes - 1, dia).toISOString().split('T')[0];
-          const hojeISO = hojeNormalizado.toISOString().split('T')[0];
+        const emissaoISO = new Date(ano, mes - 1, dia).toISOString().split('T')[0];
+        const hojeISO = hojeNormalizado.toISOString().split('T')[0];
 
-          console.log(hojeISO)
-          console.log(emissaoISO, 'emissao')
-
-          if (emissaoISO > hojeISO) {
-            validacaoData = { code: 1001, message: 'Data de emissão no futuro' };
-          } else if (diffDias > 30) {
-            validacaoData = { code: 1002, message: 'Data de emissão superior a 30 dias' };
-          }
+        if (emissaoISO > hojeISO) {
+          validacaoData = { code: 1001, message: 'Data de emissão no futuro' };
+        } else if (diffDias > 30) {
+          validacaoData = { code: 1002, message: 'Data de emissão superior a 30 dias' };
         }
-
-        novoItem = {
-          ...res,
-          data: { ...(res?.data ?? {}), numeroMTR },
-          validacaoData,
-        };
       }
 
-      // Insere com ordem calculada a partir do estado anterior (sem pular)
-      setResultados(prev => {
-        // Anti-duplicata por número MTR
-        const numero = novoItem?.data?.numeroMTR;
-        if (numero && prev.some(i => i?.data?.numeroMTR === numero)) {
-          return prev; // já existe → não insere nem mexe na ordem
-        }
-
-        const ultimaOrdem = prev.length > 0 ? (prev[prev.length - 1].ordem ?? 0) : 0;
-        const ordem = ultimaOrdem + 1;
-
-        return [...prev, { ...novoItem, ordem }];
-      });
-    } catch (error) {
-      console.error('Erro ao consultar MTR:', error);
-
-      // Mesmo no erro, calcula ordem com base no estado atual
-      setResultados(prev => {
-        const ultimaOrdem = prev.length > 0 ? (prev[prev.length - 1].ordem ?? 0) : 0;
-        const ordem = ultimaOrdem + 1;
-
-        return [
-          ...prev,
-          {
-            data: { numeroMTR: proximo },
-            validation: { code: 998, message: 'Erro ao consultar MTR' },
-            validacaoData: null,
-            ordem,
-          },
-        ];
-      });
-    } finally {
-      emProcessamentoRef.current.delete(proximo);
-      processandoRef.current = false;
-      setTimeout(processarFila, 100);
+      novoItem = {
+        ...res,
+        data: { ...(res?.data ?? {}), numeroMTR },
+        validacaoData,
+      };
     }
-  };
+
+    setResultados(prev => {
+      const numero = novoItem?.data?.numeroMTR;
+      if (numero && prev.some(i => i?.data?.numeroMTR === numero)) return prev;
+
+      const ultimaOrdem = prev.length > 0 ? (prev[prev.length - 1].ordem ?? 0) : 0;
+      const ordem = ultimaOrdem + 1;
+
+      return [...prev, { ...novoItem, ordem }];
+    });
+  } catch (error: any) {
+    // ✅ Se vier 429 via exception, faz retry igual
+    const status = error?.status ?? error?.response?.status;
+    if (status === 429) {
+      const wait = Math.min(2000, 300 * Math.pow(2, tentativa - 1));
+      filaRef.current.unshift(proximo);
+      processandoRef.current = false;
+      setTimeout(processarFila, wait);
+      return;
+    }
+
+    console.error('Erro ao consultar MTR:', error);
+
+    setResultados(prev => {
+      const ultimaOrdem = prev.length > 0 ? (prev[prev.length - 1].ordem ?? 0) : 0;
+      const ordem = ultimaOrdem + 1;
+
+      return [
+        ...prev,
+        {
+          data: { numeroMTR: proximo },
+          validation: { code: 998, message: 'Erro ao consultar MTR' },
+          validacaoData: null,
+          ordem,
+        },
+      ];
+    });
+  } finally {
+    // ⚠️ Só libera o emProcessamento quando NÃO for retry
+    // Neste fluxo, no retry a gente faz "return" antes de cair aqui.
+    emProcessamentoRef.current.delete(proximo);
+    processandoRef.current = false;
+    setTimeout(processarFila, 100);
+  }
+};
+
+  
 
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -649,6 +770,7 @@ export default function MtrForm() {
     </div>
   );
 }
+
 
 
 
