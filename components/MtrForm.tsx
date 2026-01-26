@@ -751,7 +751,7 @@ export default function MtrForm() {
           <button
             type="button"
             onClick={gerarPDF}
-            {disabled={
+            disabled={
               resultados.filter((r) => r.validation?.code === 200 && !r.validacaoData)
                 .length === 0 || gerandoPDF
             } 
@@ -905,6 +905,7 @@ export default function MtrForm() {
     </div>
   );
 }
+
 
 
 
