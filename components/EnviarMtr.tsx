@@ -107,6 +107,29 @@ export default function MtrBaixaPage() {
 
 
 
+  async function consultarMtrComRetry(codigo: string, user: any, tentativas = 3) {
+  let last: any = null;
+
+  for (let i = 0; i < tentativas; i++) {
+    const data = await consultarMtrServer(codigo, user);
+    last = data;
+
+    if (!data?.erro) return data;
+
+    if (data?.status === 429) {
+      const delay = 1100 * (i + 1);
+      await new Promise(r => setTimeout(r, delay));
+      continue;
+    }
+
+    return data; // erro não retryável
+  }
+
+  return last || { erro: true, mensagem: "Servidor ocupado (retry esgotado)" };
+}
+
+  
+
   const limparDados = () => {
     setMtrsSelecionados([]);
     setMtrsValidos([]);
@@ -433,7 +456,8 @@ export default function MtrBaixaPage() {
 
     for (const codigo of unicos) {
       try {
-        const data = await consultarMtrServer(codigo, user);
+        // const data = await consultarMtrServer(codigo, user);
+        const data = await consultarMtrComRetry(codigo, user, 3);
 
         // quando o server já retorna erro tratado
         if (data.erro) {
@@ -876,6 +900,7 @@ export default function MtrBaixaPage() {
     </div>
   );
 }
+
 
 
 
