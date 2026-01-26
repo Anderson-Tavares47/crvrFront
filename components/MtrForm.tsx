@@ -751,10 +751,10 @@ export default function MtrForm() {
           <button
             type="button"
             onClick={gerarPDF}
-            /* {disabled={
+            {disabled={
               resultados.filter((r) => r.validation?.code === 200 && !r.validacaoData)
                 .length === 0 || gerandoPDF
-            }  */
+            } 
             className={`px-4 py-2 text-[15px] font-medium rounded-md transition flex items-center justify-center cursor-pointer ${resultados.filter((r) => r.validation?.code === 200 && !r.validacaoData)
               .length > 0
               ? "bg-[#293f58] text-white hover:bg-green-700"
@@ -905,6 +905,7 @@ export default function MtrForm() {
     </div>
   );
 }
+
 
 
 
