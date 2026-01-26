@@ -16,6 +16,15 @@ export async function buscarManifestoMTR(numeroMtr: string, user: any) {
     });
 
     const data = await response.json();
+
+    if (response.status === 429) {
+      return {
+        erro: true,
+        status: 429,
+        mensagem: data?.message || "Servidor ocupado. Tente novamente.",
+      };
+    }
+    
     if (!data?.success || data?.validation?.code >= 400) {
       return {
         erro: true,
@@ -29,3 +38,4 @@ export async function buscarManifestoMTR(numeroMtr: string, user: any) {
     return { erro: true, mensagem: error?.message || "Erro ao consultar MTR" };
   }
 }
+
