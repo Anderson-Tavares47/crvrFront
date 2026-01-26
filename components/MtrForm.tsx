@@ -427,136 +427,271 @@ export default function MtrForm() {
 
 
 
+  // const gerarPDF = () => {
+  //   setGerandoPDF(true);
+
+  //   const doc = new jsPDF();
+  //   const mtrsValidos = [...resultados]
+  //     .filter((r) => r.validation?.code === 200 && !r.validacaoData)
+  //     .sort((a, b) => a.ordem - b.ordem); // Ordena por ordem decrescente no PDF
+
+  //   if (mtrsValidos.length === 0) {
+  //     alert("Não há MTRs válidos para gerar o relatório!");
+  //     setGerandoPDF(false);
+  //     return;
+  //   }
+
+  //   const pageWidth = doc.internal.pageSize.getWidth();
+  //   const pageHeight = doc.internal.pageSize.getHeight();
+  //   const margin = 15;
+  //   const lineHeight = 7;
+  //   const colWidth = (pageWidth - margin * 2) / 4;
+  //   const maxLinesPerCol = Math.floor((pageHeight - margin * 2 - 30) / lineHeight);
+
+  //   try {
+  //     if (Logo?.src) {
+  //       doc.saveGraphicsState();
+  //       const gState = new (doc as any).GState({ opacity: 0.1 });
+  //       doc.setGState(gState);
+  //       doc.addImage(
+  //         Logo.src,
+  //         'JPEG',
+  //         (pageWidth - 100) / 2,
+  //         (pageHeight - 100) / 2,
+  //         100,
+  //         100,
+  //         undefined,
+  //         'NONE'
+  //       );
+  //       doc.restoreGraphicsState();
+  //     }
+  //   } catch (error) {
+  //     console.error("Erro ao adicionar logo:", error);
+  //   }
+
+  //   doc.setFont("helvetica", "bold");
+  //   doc.setFontSize(16);
+  //   doc.setTextColor(40, 40, 40);
+  //   doc.text("RELATÓRIO DE MTRs", pageWidth / 2, margin, { align: 'center' });
+
+  //   const hoje = new Date();
+  //   const dataFormatada = hoje.toLocaleDateString('pt-BR');
+  //   const horaFormatada = hoje.getHours().toString().padStart(2, '0');
+  //   const minutosFormatado = hoje.getMinutes().toString().padStart(2, '0');
+  //   doc.setFontSize(10);
+
+  //   doc.setDrawColor(200, 200, 200);
+
+  //   let currentPage = 1;
+  //   let currentCol = 0;
+  //   let currentLine = 0;
+  //   const colsWithContent = new Set<number>();
+
+  //   const addConditionalHeaders = (y: number) => {
+  //     doc.setFont("helvetica", "bold");
+  //     doc.setFontSize(10);
+  //     for (let c = 0; c < 4; c++) {
+  //       if (colsWithContent.has(c)) {
+  //         const x = margin + (c * colWidth);
+  //         doc.text("Nº CÓDIGO MTR", x, y);
+  //       }
+  //     }
+  //     doc.setFont("helvetica", "normal");
+  //   };
+
+  //   let yPosition = margin + 25;
+
+  //   doc.setFontSize(10);
+
+  //   mtrsValidos.forEach((r, idx) => {
+  //     if (currentLine >= maxLinesPerCol) {
+  //       currentCol++;
+  //       currentLine = 0;
+  //       if (currentCol > 3) {
+  //         doc.addPage();
+  //         currentPage++;
+  //         currentCol = 0;
+  //         yPosition = margin + 25;
+  //         colsWithContent.clear();
+  //       } else {
+  //         yPosition = margin + 25;
+  //       }
+  //     }
+
+  //     colsWithContent.add(currentCol);
+
+  //     const xPosition = margin + (currentCol * colWidth);
+  //     if (currentLine === 0) {
+  //       addConditionalHeaders(yPosition - lineHeight - 2);
+  //     }
+
+  //     doc.text(`${idx + 1}. ${r.data.numeroMTR}`, xPosition, yPosition);
+
+  //     yPosition += lineHeight;
+  //     currentLine++;
+  //   });
+
+  //   doc.setPage(currentPage);
+  //   // let footerY = pageHeight - margin - 8;
+  //   // if (yPosition > footerY - 20) {
+  //   //   doc.addPage();
+  //   //   footerY = pageHeight - margin - 15;
+  //   // }
+
+  //   const assinaturaHeight = lineHeight * 3;
+  //   let footerY = pageHeight - margin - assinaturaHeight;
+
+  //   if (footerY < yPosition + lineHeight) {
+  //     doc.addPage();
+  //     footerY = pageHeight - margin - assinaturaHeight;
+  //   }
+
+  //   doc.setDrawColor(200, 200, 200);
+  //   footerY += lineHeight;
+
+  //   doc.setFontSize(16);
+  //   doc.text("Assinatura do Motorista: ________________________________________", margin, footerY);
+  //   footerY += lineHeight;
+  //   doc.text(`Data: ${dataFormatada}, ${horaFormatada}:${minutosFormatado}`, margin, footerY);
+
+  //   doc.save(`Relatorio_MTRs_${dataFormatada.replace(/\//g, '-')}.pdf`);
+  //   setGerandoPDF(false);
+  // };
+
+
   const gerarPDF = () => {
-    setGerandoPDF(true);
+  setGerandoPDF(true);
 
-    const doc = new jsPDF();
-    const mtrsValidos = [...resultados]
-      .filter((r) => r.validation?.code === 200 && !r.validacaoData)
-      .sort((a, b) => a.ordem - b.ordem); // Ordena por ordem decrescente no PDF
+  const doc = new jsPDF();
 
-    if (mtrsValidos.length === 0) {
-      alert("Não há MTRs válidos para gerar o relatório!");
-      setGerandoPDF(false);
-      return;
-    }
+  const mtrsValidos = [...resultados]
+    .filter((r) => r.validation?.code === 200 && !r.validacaoData)
+    .sort((a, b) => a.ordem - b.ordem);
 
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
-    const margin = 15;
-    const lineHeight = 7;
-    const colWidth = (pageWidth - margin * 2) / 4;
-    const maxLinesPerCol = Math.floor((pageHeight - margin * 2 - 30) / lineHeight);
-
-    try {
-      if (Logo?.src) {
-        doc.saveGraphicsState();
-        const gState = new (doc as any).GState({ opacity: 0.1 });
-        doc.setGState(gState);
-        doc.addImage(
-          Logo.src,
-          'JPEG',
-          (pageWidth - 100) / 2,
-          (pageHeight - 100) / 2,
-          100,
-          100,
-          undefined,
-          'NONE'
-        );
-        doc.restoreGraphicsState();
-      }
-    } catch (error) {
-      console.error("Erro ao adicionar logo:", error);
-    }
-
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(16);
-    doc.setTextColor(40, 40, 40);
-    doc.text("RELATÓRIO DE MTRs", pageWidth / 2, margin, { align: 'center' });
-
-    const hoje = new Date();
-    const dataFormatada = hoje.toLocaleDateString('pt-BR');
-    const horaFormatada = hoje.getHours().toString().padStart(2, '0');
-    const minutosFormatado = hoje.getMinutes().toString().padStart(2, '0');
-    doc.setFontSize(10);
-
-    doc.setDrawColor(200, 200, 200);
-
-    let currentPage = 1;
-    let currentCol = 0;
-    let currentLine = 0;
-    const colsWithContent = new Set<number>();
-
-    const addConditionalHeaders = (y: number) => {
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(10);
-      for (let c = 0; c < 4; c++) {
-        if (colsWithContent.has(c)) {
-          const x = margin + (c * colWidth);
-          doc.text("Nº CÓDIGO MTR", x, y);
-        }
-      }
-      doc.setFont("helvetica", "normal");
-    };
-
-    let yPosition = margin + 25;
-
-    doc.setFontSize(10);
-
-    mtrsValidos.forEach((r, idx) => {
-      if (currentLine >= maxLinesPerCol) {
-        currentCol++;
-        currentLine = 0;
-        if (currentCol > 3) {
-          doc.addPage();
-          currentPage++;
-          currentCol = 0;
-          yPosition = margin + 25;
-          colsWithContent.clear();
-        } else {
-          yPosition = margin + 25;
-        }
-      }
-
-      colsWithContent.add(currentCol);
-
-      const xPosition = margin + (currentCol * colWidth);
-      if (currentLine === 0) {
-        addConditionalHeaders(yPosition - lineHeight - 2);
-      }
-
-      doc.text(`${idx + 1}. ${r.data.numeroMTR}`, xPosition, yPosition);
-
-      yPosition += lineHeight;
-      currentLine++;
-    });
-
-    doc.setPage(currentPage);
-    // let footerY = pageHeight - margin - 8;
-    // if (yPosition > footerY - 20) {
-    //   doc.addPage();
-    //   footerY = pageHeight - margin - 15;
-    // }
-
-    const assinaturaHeight = lineHeight * 3;
-    let footerY = pageHeight - margin - assinaturaHeight;
-
-    if (footerY < yPosition + lineHeight) {
-      doc.addPage();
-      footerY = pageHeight - margin - assinaturaHeight;
-    }
-
-    doc.setDrawColor(200, 200, 200);
-    footerY += lineHeight;
-
-    doc.setFontSize(16);
-    doc.text("Assinatura do Motorista: ________________________________________", margin, footerY);
-    footerY += lineHeight;
-    doc.text(`Data: ${dataFormatada}, ${horaFormatada}:${minutosFormatado}`, margin, footerY);
-
-    doc.save(`Relatorio_MTRs_${dataFormatada.replace(/\//g, '-')}.pdf`);
+  if (mtrsValidos.length === 0) {
+    alert("Não há MTRs válidos para gerar o relatório!");
     setGerandoPDF(false);
+    return;
+  }
+
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const margin = 15;
+  const lineHeight = 7;
+  const colWidth = (pageWidth - margin * 2) / 4;
+
+  // 🔹 reserva espaço para assinatura
+  const assinaturaHeight = lineHeight * 4;
+
+  const maxLinesPerCol = Math.floor(
+    (pageHeight - margin * 2 - assinaturaHeight - 30) / lineHeight
+  );
+
+  // 🔹 watermark
+  try {
+    if (Logo?.src) {
+      doc.saveGraphicsState();
+      const gState = new (doc as any).GState({ opacity: 0.1 });
+      doc.setGState(gState);
+      doc.addImage(
+        Logo.src,
+        'JPEG',
+        (pageWidth - 100) / 2,
+        (pageHeight - 100) / 2,
+        100,
+        100,
+        undefined,
+        'NONE'
+      );
+      doc.restoreGraphicsState();
+    }
+  } catch {}
+
+  // 🔹 título
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(16);
+  doc.text("RELATÓRIO DE MTRs", pageWidth / 2, margin, { align: "center" });
+
+  const hoje = new Date();
+  const dataFormatada = hoje.toLocaleDateString("pt-BR");
+  const horaFormatada = hoje.toString().substring(16, 21);
+
+  doc.setFontSize(10);
+
+  let currentPage = 1;
+  let currentCol = 0;
+  let currentLine = 0;
+  let yPosition = margin + 25;
+
+  const colsWithContent = new Set<number>();
+
+  const addHeaders = (y: number) => {
+    doc.setFont("helvetica", "bold");
+    for (let c = 0; c < 4; c++) {
+      if (colsWithContent.has(c)) {
+        const x = margin + c * colWidth;
+        doc.text("Nº CÓDIGO MTR", x, y);
+      }
+    }
+    doc.setFont("helvetica", "normal");
   };
+
+  // 🔹 LISTAGEM DOS MTRs
+  mtrsValidos.forEach((r, idx) => {
+    if (currentLine >= maxLinesPerCol) {
+      currentCol++;
+      currentLine = 0;
+
+      if (currentCol > 3) {
+        doc.addPage();
+        currentPage++;
+        currentCol = 0;
+        yPosition = margin + 25;
+        colsWithContent.clear();
+      } else {
+        yPosition = margin + 25;
+      }
+    }
+
+    colsWithContent.add(currentCol);
+
+    const x = margin + currentCol * colWidth;
+
+    if (currentLine === 0) {
+      addHeaders(yPosition - 5);
+    }
+
+    doc.text(`${idx + 1}. ${r.data.numeroMTR}`, x, yPosition);
+
+    yPosition += lineHeight;
+    currentLine++;
+  });
+
+  // 🔹 ASSINATURA (sempre cabe, pois já reservamos espaço)
+  doc.setPage(currentPage);
+
+  let footerY = pageHeight - margin - assinaturaHeight + lineHeight;
+
+  doc.setFontSize(14);
+  doc.text(
+    "Assinatura do Motorista: ________________________________________",
+    margin,
+    footerY
+  );
+
+  footerY += lineHeight;
+
+  doc.setFontSize(11);
+  doc.text(
+    `Data: ${dataFormatada}  Hora: ${horaFormatada}`,
+    margin,
+    footerY
+  );
+
+  doc.save(`Relatorio_MTRs_${dataFormatada.replace(/\//g, "-")}.pdf`);
+  setGerandoPDF(false);
+};
+
 
   return (
     <div className="w-full px-4 mt-8">
@@ -770,6 +905,7 @@ export default function MtrForm() {
     </div>
   );
 }
+
 
 
 
