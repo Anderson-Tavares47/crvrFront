@@ -18,7 +18,7 @@ export default function Bloqueado() {
         </svg>
         <h1 className="text-2xl font-bold text-gray-800">Sistema Indisponível</h1>
         <p className="text-gray-500">
-          Este sistema está temporariamente fora do ar. Por favor, tente novamente mais tarde ou entre em contato com o suporte.
+          Por favor, avise sua gestão ou entre em contato com o suporte.
         </p>
       </div>
     </div>
